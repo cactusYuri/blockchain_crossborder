@@ -259,6 +259,35 @@ class Blockchain {
             };
             this.worldState.orders[orderId] = newOrder;
             console.log(` -> Order ${orderId} for product ${productId} created by buyer ${from.substring(0,20)}...`);
+        } else if (functionName === 'ConfirmShipment') {
+            const [orderId, trackingNumber] = originalArgs;
+            if (this.worldState.orders && this.worldState.orders[orderId]) {
+                const order = this.worldState.orders[orderId];
+                if (order.status === 'PENDING') {
+                    order.status = 'SHIPPED';
+                    order.trackingNumber = trackingNumber || 'N/A';
+                    order.shippedAt = new Date(timestamp).toISOString();
+                    console.log(` -> Order ${orderId} status updated to SHIPPED.`);
+                } else {
+                    console.warn(` -> Order ${orderId} cannot be shipped. Current status: ${order.status}`);
+                }
+            } else {
+                console.error(` -> Order ${orderId} not found in world state for ConfirmShipment.`);
+            }
+        } else if (functionName === 'ConfirmDelivery') {
+            const [orderId] = originalArgs;
+             if (this.worldState.orders && this.worldState.orders[orderId]) {
+                const order = this.worldState.orders[orderId];
+                if (order.status === 'SHIPPED') {
+                    order.status = 'DELIVERED';
+                    order.deliveredAt = new Date(timestamp).toISOString();
+                    console.log(` -> Order ${orderId} status updated to DELIVERED.`);
+                } else {
+                     console.warn(` -> Order ${orderId} cannot be delivered. Current status: ${order.status}`);
+                }
+            } else {
+                console.error(` -> Order ${orderId} not found in world state for ConfirmDelivery.`);
+            }
         }
     } else {
         console.warn(`[Processing TX ${id}] Unknown chaincode: ${chaincodeName}`);

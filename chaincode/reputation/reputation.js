@@ -1,87 +1,213 @@
 'use strict';
 
-const { Contract } = require('fabric-contract-api');
+const fs = require('fs');
+const path = require('path');
 
-class ReputationContract extends Contract {
+// Define the path for the persistence file relative to this script's location
+const dataFilePath = path.join(__dirname, '..', '..', 'data', 'reviews.json');
 
-    async initLedger(ctx) {
-        console.info('============= START : Initialize Reputation Ledger ===========');
-        // 可以添加初始的信誉数据或配置
-        console.info('============= END : Initialize Reputation Ledger ===========');
+// No Fabric dependencies needed for local simulation
+// const { Contract } = require('fabric-contract-api');
+
+// Simple counter for simulating transaction IDs
+let txCounter = 0;
+
+class ReputationContractLocal { // Renamed to avoid confusion
+
+    constructor() {
+        console.info('Initializing Local Reputation Ledger with Persistence...');
+        // Use Maps to simulate the key-value state store
+        this.reputations = new Map(); // Key: `REP_${merchantId}`, Value: reputation object
+        this.reviews = new Map();     // Key: `Review_${merchantId}_${reviewId}`, Value: review object
+        this._loadData(); // Load existing data from file first
+        // initLedger might overwrite loaded data if not careful, maybe remove or adapt
+        // this.initLedger();
+        console.info('Local Reputation Ledger Initialized.');
+    }
+
+    // Load data from the JSON file
+    _loadData() {
+        try {
+            if (fs.existsSync(dataFilePath)) {
+                const data = fs.readFileSync(dataFilePath, 'utf8');
+                if (data) {
+                    const jsonData = JSON.parse(data);
+                    // Convert arrays back to Maps
+                    if (jsonData.reputations) {
+                        this.reputations = new Map(jsonData.reputations);
+                    }
+                    if (jsonData.reviews) {
+                        this.reviews = new Map(jsonData.reviews);
+                        // Find the max txCounter from loaded reviews if necessary
+                        let maxId = 0;
+                        this.reviews.forEach(review => {
+                            const idPart = review.reviewId.split('_').pop();
+                            const num = parseInt(idPart, 10);
+                            if (!isNaN(num) && num > maxId) {
+                                maxId = num;
+                            }
+                        });
+                        txCounter = maxId; // Resume counter from last known ID
+                    }
+                    console.info(`Loaded data from ${dataFilePath}`);
+                } else {
+                     console.info(`${dataFilePath} is empty. Starting fresh.`);
+                }
+            } else {
+                console.info(`${dataFilePath} not found. Starting fresh.`);
+            }
+        } catch (error) {
+            console.error(`Error loading data from ${dataFilePath}:`, error);
+            // Decide if you want to start fresh or throw error
+            console.warn('Starting with empty data due to load error.');
+            this.reputations = new Map();
+            this.reviews = new Map();
+            txCounter = 0;
+        }
+    }
+
+    // Save data to the JSON file
+    _saveData() {
+        try {
+            // Convert Maps to arrays of [key, value] pairs for JSON serialization
+            const dataToSave = {
+                reputations: Array.from(this.reputations.entries()),
+                reviews: Array.from(this.reviews.entries())
+            };
+            const jsonData = JSON.stringify(dataToSave, null, 2); // Pretty print JSON
+            fs.writeFileSync(dataFilePath, jsonData, 'utf8');
+            // console.info(`Data successfully saved to ${dataFilePath}`); // Optional: logs can be noisy
+        } catch (error) {
+            console.error(`Error saving data to ${dataFilePath}:`, error);
+            // Handle error appropriately - maybe retry, log, or alert
+        }
+    }
+
+    // Simulate ctx.stub.getTxID()
+    _getNextTxId() {
+        txCounter++;
+        return `localTx_${Date.now()}_${txCounter}`;
+    }
+
+    // Simulate ctx.stub.createCompositeKey()
+    _createCompositeKey(objectType, attributes) {
+        // Simple simulation: join attributes with a separator
+        return `${objectType}_${attributes.join('_')}`;
     }
 
     /**
-     * 添加评价记录
-     * @param {Context} ctx
-     * @param {string} reviewId - 评价的唯一ID (可以由客户端生成或在此生成)
-     * @param {string} orderId - 关联的订单ID
-     * @param {string} sellerId - 被评价的卖家ID
-     * @param {string} buyerId - 提交评价的买家ID
-     * @param {number} rating - 评分 (e.g., 1-5)
-     * @param {string} commentHash - 评论内容的哈希值 (避免存储大文本)
-     * @param {string} timestamp - 评价提交的时间戳
+     * 提交评价 (Local Simulation with Persistence)
+     * No ctx parameter needed now
+     * @param {string} userId 用户ID
+     * @param {string} merchantId 商家ID
+     * @param {string} orderId 关联订单ID
+     * @param {number} rating 评分 (e.g., 1-5)
+     * @param {string} comment 评论内容
      */
-    async AddReviewRecord(ctx, reviewId, orderId, sellerId, buyerId, rating, commentHash, timestamp) {
-        console.info('============= START : AddReviewRecord ===========');
+    async submitReview(userId, merchantId, orderId, rating, comment) {
+        console.info('============= START : submitReview (Local) ===========');
+
+        rating = parseInt(rating, 10);
+        if (isNaN(rating) || rating < 1 || rating > 5) {
+            throw new Error('Rating must be an integer between 1 and 5.');
+        }
+        if (!userId || !merchantId || !orderId) {
+            throw new Error('User ID, Merchant ID, and Order ID are required.');
+        }
+
+        const timestamp = new Date().toISOString();
+        const reviewId = this._getNextTxId();
 
         const review = {
-            txId: ctx.stub.getTxID(),
             reviewId: reviewId,
+            userId: userId,
+            merchantId: merchantId,
             orderId: orderId,
-            sellerId: sellerId,
-            buyerId: buyerId,
-            rating: parseInt(rating), // 确保是数字类型
-            commentHash: commentHash,
+            rating: rating,
+            comment: comment || '',
             timestamp: timestamp,
+            docType: 'review'
         };
 
-        // 使用复合键或特定模式来存储评价，以便于查询
-        // 方案一：按卖家聚合 (像模拟代码一样)
-        const sellerReviewsKey = `REVIEWS_${sellerId}`;
-        const sellerReviewsBytes = await ctx.stub.getState(sellerReviewsKey);
-        let sellerReviews = [];
-        if (sellerReviewsBytes && sellerReviewsBytes.length > 0) {
-            sellerReviews = JSON.parse(sellerReviewsBytes.toString());
+        const reviewKey = this._createCompositeKey('Review', [merchantId, reviewId]);
+        this.reviews.set(reviewKey, review);
+        console.info(`Review ${reviewId} submitted locally for merchant ${merchantId} regarding order ${orderId}`);
+
+        const reputationKey = `REP_${merchantId}`;
+        let reputation = this.reputations.get(reputationKey);
+
+        if (!reputation) {
+            reputation = {
+                merchantId: merchantId,
+                totalRatingSum: rating,
+                reviewCount: 1,
+                averageRating: rating.toFixed(2),
+                docType: 'reputation'
+            };
+        } else {
+            reputation.totalRatingSum += rating;
+            reputation.reviewCount += 1;
+            reputation.averageRating = (reputation.totalRatingSum / reputation.reviewCount).toFixed(2);
         }
-        sellerReviews.push(review);
-        await ctx.stub.putState(sellerReviewsKey, Buffer.from(JSON.stringify(sellerReviews)));
 
-        // 方案二：每个评价一个独立的键 (reviewId 作为 key)
-        // await ctx.stub.putState(reviewId, Buffer.from(JSON.stringify(review)));
-        // 这种方式查询某个卖家的所有评价会复杂些（需要范围查询或索引）
+        this.reputations.set(reputationKey, reputation);
+        console.info(`Local Reputation updated for merchant ${merchantId}: Avg Rating ${reputation.averageRating}, Count ${reputation.reviewCount}`);
 
-        console.info(`Review record added for seller ${sellerId} with ID ${reviewId}`);
-        console.info('============= END : AddReviewRecord ===========');
-        // ctx.stub.setEvent('ReviewEvent', Buffer.from(JSON.stringify(review)));
-        return JSON.stringify(review);
+        // Save data after modification
+        this._saveData();
+
+        console.info('============= END : submitReview (Local) ===========');
+        return review;
     }
 
     /**
-     * 获取指定卖家的所有评价记录
-     * @param {Context} ctx
-     * @param {string} sellerId - 卖家ID
+     * 根据商家ID获取所有评价 (Local Simulation)
+     * @param {string} merchantId 商家ID
      */
-    async GetSellerReviews(ctx, sellerId) {
-        console.info('============= START : GetSellerReviews ===========');
+    async getReviewsByMerchant(merchantId) {
+        console.info(`============= START : getReviewsByMerchant (Local) ${merchantId} ===========`);
+        const matchingReviews = [];
+        const keyPrefix = `Review_${merchantId}_`; // Prefix for composite key
 
-        // 根据上面 AddReviewRecord 选择的存储方案来查询
-        // 对应方案一：
-        const sellerReviewsKey = `REVIEWS_${sellerId}`;
-        const sellerReviewsBytes = await ctx.stub.getState(sellerReviewsKey);
-
-        if (!sellerReviewsBytes || sellerReviewsBytes.length === 0) {
-            console.info(`No reviews found for seller ${sellerId}.`);
-            return JSON.stringify([]);
+        // Simulate getStateByPartialCompositeKey by iterating through the map
+        for (const [key, value] of this.reviews.entries()) {
+            if (key.startsWith(keyPrefix)) {
+                matchingReviews.push(value);
+            }
         }
 
-        console.info(`Reviews retrieved for seller ${sellerId}`);
-        console.info('============= END : GetSellerReviews ===========');
-        return sellerReviewsBytes.toString();
-
-        // 如果使用方案二，这里需要使用范围查询或 CouchDB 查询
+        console.info(`Found ${matchingReviews.length} local reviews for merchant ${merchantId}`);
+        console.info(`============= END : getReviewsByMerchant (Local) ${merchantId} ===========`);
+        // Return array directly
+        return matchingReviews;
     }
 
-    // 可以添加其他函数，例如计算平均评分、获取单个评价等
+     /**
+     * 获取商家信誉信息 (Local Simulation)
+     * @param {string} merchantId 商家ID
+     */
+     async getMerchantReputation(merchantId) {
+        console.info(`============= START : getMerchantReputation (Local) ${merchantId} ===========`);
+        const reputationKey = `REP_${merchantId}`;
+        const reputation = this.reputations.get(reputationKey); // Simulate getState
+
+        if (!reputation) {
+             console.info(`No local reputation record found for merchant ${merchantId}. Returning default.`);
+             const defaultReputation = {
+                 merchantId: merchantId,
+                 totalRatingSum: 0,
+                 reviewCount: 0,
+                 averageRating: "0.00",
+                 docType: 'reputation'
+             };
+             return defaultReputation; // Return object directly
+        }
+
+        console.info(`Local Reputation retrieved for merchant ${merchantId}`);
+        console.info(`============= END : getMerchantReputation (Local) ${merchantId} ===========`);
+        return reputation; // Return object directly
+    }
 }
 
-module.exports = ReputationContract; 
+// Export the local version
+module.exports = ReputationContractLocal; 

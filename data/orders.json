@@ -39,8 +39,48 @@
     "sellerId": "ac7c67fa-c0f3-4229-a893-ff0a2a0e9e6b",
     "quantity": 1,
     "totalPrice": 9999,
-    "status": "PENDING",
+    "status": "shipped",
     "createdAt": "2025-04-17T03:04:35.674Z",
-    "blockchainTxId": "tx_1744859075662_88b15d18"
+    "blockchainTxId": "tx_1744859075662_88b15d18",
+    "trackingNumber": "N/A",
+    "shippedAt": "2025-04-17T15:17:36.837Z"
+  },
+  {
+    "id": "1d3f16a4-d381-4419-b428-6ae88c3c0f89",
+    "buyerId": "ac7c67fa-c0f3-4229-a893-ff0a2a0e9e6b",
+    "productId": "fca9e877-3cb4-4e07-9fe0-a39aa4294803",
+    "sellerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "quantity": 1000,
+    "totalPrice": 100,
+    "status": "delivered",
+    "createdAt": "2025-04-17T11:53:21.808Z",
+    "blockchainTxId": "tx_1744890801789_640337e6",
+    "trackingNumber": "N/A",
+    "shippedAt": "2025-04-17T15:06:25.850Z",
+    "deliveredAt": "2025-04-17T15:22:59.096Z"
+  },
+  {
+    "id": "f97f89b0-688b-45dc-9928-cea2d6c58a5c",
+    "buyerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "productId": "fca9e877-3cb4-4e07-9fe0-a39aa4294803",
+    "sellerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "quantity": 1,
+    "totalPrice": 0.1,
+    "status": "shipped",
+    "createdAt": "2025-04-17T12:04:34.374Z",
+    "blockchainTxId": "tx_1744891474360_a4c637d1",
+    "trackingNumber": "N/A",
+    "shippedAt": "2025-04-17T15:15:37.978Z"
+  },
+  {
+    "id": "0ea4d3c0-a949-4b54-a9a9-b42563600f0e",
+    "buyerId": "ac7c67fa-c0f3-4229-a893-ff0a2a0e9e6b",
+    "productId": "9b86e7f8-02e3-4b26-bd51-5c9be0d8c825",
+    "sellerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "quantity": 1,
+    "totalPrice": 24,
+    "status": "pending",
+    "createdAt": "2025-04-17T15:48:04.384Z",
+    "blockchainTxId": "tx_1744904884348_1083789d"
   }
 ]
