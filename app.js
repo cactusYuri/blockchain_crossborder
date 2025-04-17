@@ -81,6 +81,7 @@ const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const traceRoutes = require('./routes/trace');
 const blockchainRoutes = require('./routes/blockchain');
+const traceabilityApiRoutes = require('./routes/traceabilityRoutes'); // 引入新的 API 路由
 
 // 使用路由
 app.use('/auth', authRoutes);
@@ -88,6 +89,7 @@ app.use('/products', productRoutes);
 app.use('/orders', orderRoutes);
 app.use('/trace', traceRoutes);
 app.use('/blockchain', blockchainRoutes);
+app.use('/api/traceability', traceabilityApiRoutes); // 挂载新的 API 路由到 /api/traceability
 
 // 根路由
 app.get('/', (req, res) => {

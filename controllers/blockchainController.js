@@ -2,9 +2,10 @@ const blockchainService = require('../services/blockchainService');
 
 // 获取区块链状态概览
 exports.getBlockchainOverview = (req, res) => {
-  const chainHeight = blockchainService.getChainHeight();
+  const blockchainInstance = blockchainService.getChain();
+  const chainHeight = blockchainInstance.length;
   const isValid = blockchainService.isChainValid();
-  const latestBlock = blockchainService.getBlock(chainHeight - 1);
+  const latestBlock = blockchainService.getBlock(chainHeight > 0 ? chainHeight - 1 : 0);
   const pendingTransactionsCount = blockchainService.getTransaction('pending')?.length || 0;
 
   res.render('blockchain/overview', {
