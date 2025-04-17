@@ -122,6 +122,26 @@ exports.createProduct = async (req, res) => {
 
       console.log(`产品 ${newProduct.name} (ID: ${productId}) 的创建交易 ${txId} 已提交`);
 
+      // --- 步骤 2: 商品创建成功后，记录初始溯源事件 --- 
+      try {
+          console.log(`[Product Create] Recording initial traceability event for product ${blockchainProductId}`);
+          const traceTxId = await blockchainService.submitTransaction(
+              userId,       // 卖家 ID
+              password,     // !! 同样需要密码签名 !!
+              'traceability', // 链码名称
+              'RecordEvent', // 函数名称
+              blockchainProductId, // 参数1: 链上商品 ID
+              'PRODUCT_CREATED',  // 参数2: 事件类型
+              { name: newProduct.name, origin: newProduct.origin } // 参数3: 事件数据 (可选)
+          );
+          console.log(`[Product Create] Initial traceability event recorded. TX ID: ${traceTxId}`);
+      } catch (traceError) {
+          // 溯源事件记录失败，通常不应阻塞商品创建，但需要记录日志
+          console.error(`[Product Create] WARNING: Failed to record initial traceability event for product ${blockchainProductId} after creation:`, traceError);
+          // 可以考虑添加一个标记到本地商品数据，表示溯源初始化失败
+      }
+      // --------------------------------------------
+
       // 区块链提交成功后，再保存到本地数据库 (更健壮的做法)
       if (!global.products) global.products = []; // 确保数组存在
       global.products.push(newProduct);
@@ -156,8 +176,8 @@ exports.createProduct = async (req, res) => {
   }
 };
 
-// 获取产品详情 (更新：传递卖家公钥)
-exports.getProductDetail = (req, res) => {
+// 获取产品详情 (更新：传递卖家信誉)
+exports.getProductDetail = async (req, res) => { // 改为 async 函数
   const productId = req.params.id;
   const product = global.products.find(p => p.id === productId);
   
@@ -168,13 +188,29 @@ exports.getProductDetail = (req, res) => {
     });
   }
   
-  // 找到卖家信息 (用 sellerId 查找)
+  // 找到卖家信息
   const seller = global.users.find(u => u.id === product.sellerId);
+  let sellerReputation = { reviews: [], score: 0, count: 0 }; // 默认值
+
+  // 如果找到了卖家，尝试获取其信誉信息
+  if (seller && seller.id) {
+    try {
+      console.log(`[Product Detail] Fetching reputation for seller ${seller.id}`);
+      const reputationData = await blockchainService.query('reputation', seller.id);
+      if (reputationData) {
+        sellerReputation = reputationData; // 使用从链上查询到的数据
+      }
+    } catch (error) {
+      console.error(`[Product Detail] Failed to fetch reputation for seller ${seller.id}:`, error);
+      // 获取失败，继续使用默认值，页面会显示加载失败
+    }
+  }
   
   res.render('products/show', {
     title: `${product.name} - VeriTrade Chain`,
     product,
-    seller: seller ? { id: seller.id, name: seller.name, publicKey: seller.publicKey } : { name: '未知卖家' }, // 传递公钥
+    seller: seller ? { id: seller.id, name: seller.name, publicKey: seller.publicKey } : { name: '未知卖家' }, 
+    sellerReputation: sellerReputation, // <-- 传递信誉数据给视图
     user: req.session.user
   });
 }; 

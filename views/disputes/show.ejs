@@ -1,0 +1,192 @@
+<%# views/disputes/show.ejs %>
+<%- include('../partials/header') %>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <div class="d-flex justify-content-between align-items-center">
+       <h2 class="mb-0">争议详情 #<%= dispute.disputeId.substring(0, 8) %>...</h2>
+       <span class="badge fs-6 
+         <% if (dispute.status === 'OPEN') { %>bg-warning text-dark<% } %>
+         <% if (dispute.status === 'EVIDENCE_GATHERING') { %>bg-info text-dark<% } %>
+         <% if (dispute.status === 'RESOLVED') { %>bg-success<% } %>
+       "><%= dispute.status %></span>
+    </div>
+  </div>
+  <div class="card-body">
+    <h5>基础信息</h5>
+    <p><strong>关联订单:</strong> <a href="/orders/<%= dispute.orderId %>"><%= dispute.orderId %></a></p>
+    <p><strong>发起时间:</strong> <%= new Date(dispute.createdAt || dispute.timestamp).toLocaleString() %></p>
+    <p><strong>发起方公钥:</strong> <small><%= dispute.plaintiffPublicKey %></small></p>
+    <p><strong>被诉方ID:</strong> <small><%= dispute.defendantId %></small></p>
+    <p><strong>争议原因:</strong> <%= dispute.reason %></p>
+    
+    <hr>
+    
+    <h5>证据列表 (<%= dispute.evidence.length %> 条)</h5>
+    <ul class="list-group mb-3" id="evidence-list">
+      <% if (dispute.evidence && dispute.evidence.length > 0) { %>
+        <% dispute.evidence.forEach(evi => { %>
+          <li class="list-group-item">
+            <p class="mb-1"><strong>提交者公钥:</strong> <small><%= evi.partyPublicKey %></small></p>
+            <p class="mb-1"><strong>提交时间:</strong> <small><%= new Date(evi.timestamp).toLocaleString() %></small></p>
+            <p class="mb-1"><strong>证据哈希:</strong> <small><%= evi.dataHash %></small></p>
+            <p class="mb-0"><strong>交易ID:</strong> <small><%= evi.txId ? evi.txId.substring(0,16)+'...' : 'N/A' %></small></p>
+          </li>
+        <% }) %>
+      <% } else { %>
+        <li class="list-group-item text-muted">暂无证据提交。</li>
+      <% } %>
+    </ul>
+
+    <%# 提交证据表单 (仅当事人且状态为 OPEN 或 EVIDENCE_GATHERING 时显示) %>
+    <% if (dispute.status !== 'RESOLVED' && user && (user.publicKey === dispute.plaintiffPublicKey || user.id === dispute.defendantId)) { %>
+      <div class="card mb-3">
+        <div class="card-body">
+          <h6 class="card-title">提交新证据</h6>
+          <form id="submit-evidence-form" data-dispute-id="<%= dispute.disputeId %>">
+            <div class="mb-3">
+              <label for="evidenceData" class="form-label">证据描述或数据</label>
+              <textarea class="form-control" id="evidenceData" name="evidenceData" rows="3" required></textarea>
+              <div class="form-text">实际应用中应上传文件，这里仅提交文本描述，后端将计算其哈希。</div>
+            </div>
+            <div class="mb-3">
+               <label for="evidencePassword" class="form-label">您的密码 (用于签名)</label>
+               <input type="password" class="form-control" id="evidencePassword" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">提交证据</button>
+            <div id="evidence-message" class="mt-2"></div>
+          </form>
+        </div>
+      </div>
+    <% } %>
+
+    <hr>
+
+    <h5>裁决结果</h5>
+    <% if (dispute.resolution) { %>
+      <div class="alert alert-success">
+        <p class="mb-1"><strong>裁决时间:</strong> <%= new Date(dispute.resolution.timestamp).toLocaleString() %></p>
+        <p class="mb-1"><strong>仲裁者公钥:</strong> <small><%= dispute.resolution.arbiterPublicKey %></small></p>
+        <p class="mb-1"><strong>裁决结果:</strong> <%= dispute.resolution.decision %></p>
+        <p class="mb-0"><strong>交易ID:</strong> <small><%= dispute.resolution.txId ? dispute.resolution.txId.substring(0,16)+'...' : 'N/A' %></small></p>
+      </div>
+    <% } else { %>
+      <p class="text-muted">争议尚未解决。</p>
+    <% } %>
+
+    <%# 解决争议表单 (仅管理员且状态未解决时显示) %>
+    <% if (dispute.status !== 'RESOLVED' && user && user.role === 'admin') { %>
+       <div class="card mt-3">
+        <div class="card-body">
+          <h6 class="card-title">解决争议 (管理员操作)</h6>
+          <form id="resolve-dispute-form" data-dispute-id="<%= dispute.disputeId %>">
+            <div class="mb-3">
+              <label for="decision" class="form-label">裁决结果描述</label>
+              <textarea class="form-control" id="decision" name="decision" rows="2" required placeholder="例如: 同意退款给买家 / 驳回申请，释放资金给卖家"></textarea>
+              <div class="form-text">根据描述中的关键词（如 'refund buyer', 'release seller'）会自动触发资金操作。</div>
+            </div>
+            <div class="mb-3">
+               <label for="resolvePassword" class="form-label">您的管理员密码 (用于签名)</label>
+               <input type="password" class="form-control" id="resolvePassword" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-danger">确认解决</button>
+            <div id="resolve-message" class="mt-2"></div>
+          </form>
+        </div>
+      </div>
+    <% } %>
+
+  </div>
+  <div class="card-footer">
+     <a href="/orders/<%= dispute.orderId %>" class="btn btn-outline-secondary">返回订单详情</a>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const submitEvidenceForm = document.getElementById('submit-evidence-form');
+    const evidenceMessageDiv = document.getElementById('evidence-message');
+    const resolveDisputeForm = document.getElementById('resolve-dispute-form');
+    const resolveMessageDiv = document.getElementById('resolve-message');
+
+    // 处理提交证据
+    if (submitEvidenceForm) {
+        submitEvidenceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            evidenceMessageDiv.textContent = '正在提交...';
+            evidenceMessageDiv.className = 'mt-2 alert alert-info';
+
+            const disputeId = submitEvidenceForm.dataset.disputeId;
+            const evidenceData = submitEvidenceForm.querySelector('#evidenceData').value;
+            const password = submitEvidenceForm.querySelector('#evidencePassword').value;
+
+            if (!evidenceData || !password) {
+                 evidenceMessageDiv.textContent = '请填写证据描述和密码！';
+                 evidenceMessageDiv.className = 'mt-2 alert alert-danger';
+                 return;
+            }
+
+            try {
+                const response = await fetch(`/api/disputes/${disputeId}/evidence`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ evidenceData, password })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
+                }
+                evidenceMessageDiv.textContent = `证据已提交 (哈希: ${result.evidenceHash})。交易ID: ${result.transactionId}。页面将在 3 秒后刷新。`;
+                evidenceMessageDiv.className = 'mt-2 alert alert-success';
+                submitEvidenceForm.reset();
+                setTimeout(() => window.location.reload(), 3000); // 简单刷新页面以看到新证据
+            } catch (error) {
+                 console.error('Error submitting evidence:', error);
+                 evidenceMessageDiv.textContent = `提交证据失败: ${error.message}`;
+                 evidenceMessageDiv.className = 'mt-2 alert alert-danger';
+            }
+        });
+    }
+
+    // 处理解决争议
+    if (resolveDisputeForm) {
+         resolveDisputeForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            resolveMessageDiv.textContent = '正在处理...';
+            resolveMessageDiv.className = 'mt-2 alert alert-info';
+
+            const disputeId = resolveDisputeForm.dataset.disputeId;
+            const decision = resolveDisputeForm.querySelector('#decision').value;
+            const password = resolveDisputeForm.querySelector('#resolvePassword').value;
+
+             if (!decision || !password) {
+                 resolveMessageDiv.textContent = '请填写裁决结果和密码！';
+                 resolveMessageDiv.className = 'mt-2 alert alert-danger';
+                 return;
+            }
+
+            try {
+                const response = await fetch(`/api/disputes/${disputeId}/resolve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ decision, password })
+                });
+                const result = await response.json();
+                 if (!response.ok || !result.success) {
+                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
+                }
+                resolveMessageDiv.textContent = `争议已成功解决！交易ID: ${result.transactionId}。页面将在 3 秒后刷新。`;
+                resolveMessageDiv.className = 'mt-2 alert alert-success';
+                resolveDisputeForm.style.display = 'none'; // 隐藏表单
+                setTimeout(() => window.location.reload(), 3000); // 刷新页面查看结果
+            } catch (error) {
+                 console.error('Error resolving dispute:', error);
+                 resolveMessageDiv.textContent = `解决争议失败: ${error.message}`;
+                 resolveMessageDiv.className = 'mt-2 alert alert-danger';
+            }
+         });
+    }
+});
+</script>
+
+<%- include('../partials/footer') %> 

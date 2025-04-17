@@ -3,6 +3,13 @@ const fs = require('fs');
 const path = require('path');
 const { verify } = require('../utils/cryptoUtils'); // 引入验证函数
 
+// 引入新的模拟器实例
+const traceabilitySimulator = require('../chaincode/traceability/traceabilitySimulator');
+const reputationSimulator = require('../chaincode/reputation/reputationSimulator');
+const disputeResolutionSimulator = require('../chaincode/dispute_resolution/disputeResolutionSimulator');
+// 引入 Token 模拟器以处理争议解决后的资金流转
+const tokenSimulator = require('../simulators/tokenSimulator');
+
 class Transaction {
   constructor(from, chaincodeName, functionName, originalArgs, timestamp, signature, signedData) {
     this.from = from; // 交易发起者的公钥 (PEM format)
@@ -104,20 +111,23 @@ class Blockchain {
     this.chain = [];
     this.difficulty = 2;
     this.pendingTransactions = [];
+    // 不再需要在 worldState 中存储这些数据，因为它们由各自的模拟器管理
     this.worldState = {
-      traceability: {},
-      reputation: {}
+      // traceability: {},
+      // reputation: {},
+      // products: {},
+      orders: {} // 暂时保留 orders，因为它还在被 processTransaction 直接修改
     };
     this.dataDir = path.join(__dirname, '../data/blockchain');
     this.chainFile = path.join(this.dataDir, 'chain.json');
-    this.stateFile = path.join(this.dataDir, 'worldState.json');
+    this.stateFile = path.join(this.dataDir, 'worldState.json'); // 这个文件现在可能只包含 orders
     if (!fs.existsSync(this.dataDir)) {
       fs.mkdirSync(this.dataDir, { recursive: true });
     }
     this.loadFromDisk();
     if (this.chain.length === 0) {
         this.chain.push(this.createGenesisBlock());
-        this.saveToDisk();
+        this.saveToDisk(); // 保存包含 Genesis 的链
     }
   }
 
@@ -181,116 +191,111 @@ class Blockchain {
 
   processTransaction(transaction) {
     const { chaincodeName, functionName, originalArgs, from, signature, timestamp, id } = transaction;
+    const transactionDetails = { txId: id, timestamp, actorPublicKey: from, signature }; // 传递给模拟器
+
     console.log(`[Processing TX ${id}] ${chaincodeName}.${functionName}`);
 
-    if (chaincodeName === 'traceability') {
-        if (functionName === 'RecordEvent') {
-            const [productId, eventType, eventData] = originalArgs;
-            if (!this.worldState.traceability[productId]) {
-                this.worldState.traceability[productId] = [];
-            }
-            this.worldState.traceability[productId].push({
-                txId: id,
-                eventType: eventType,
-                eventData: eventData,
-                timestamp: timestamp,
-                actorPublicKey: from,
-                signature: signature
-            });
-            console.log(` -> Event '${eventType}' recorded for product ${productId}`);
-        } else {
-            console.warn(` -> Unknown function in traceability: ${functionName}`);
-        }
-    } else if (chaincodeName === 'reputation') {
-        if (functionName === 'AddReviewRecord') {
-            const [reviewId, orderId, sellerId, rating, commentHash] = originalArgs;
-            const sellerReviewsKey = `REVIEWS_${sellerId}`;
-             if (!this.worldState.reputation[sellerReviewsKey]) {
-                this.worldState.reputation[sellerReviewsKey] = [];
-            }
-            this.worldState.reputation[sellerReviewsKey].push({
-                txId: id,
-                reviewId: reviewId,
-                orderId: orderId,
-                buyerPublicKey: from,
-                sellerId: sellerId,
-                rating: parseInt(rating),
-                commentHash: commentHash,
-                timestamp: timestamp,
-                signature: signature
-            });
-            console.log(` -> Review ${reviewId} added for seller ${sellerId} by ${from.substring(0,20)}...`);
-        } else {
-            console.warn(` -> Unknown function in reputation: ${functionName}`);
-        }
-    } else if (chaincodeName === 'product') {
-        if (functionName === 'CreateProduct') {
-            const [productId, name, price, description, origin] = originalArgs;
-            if (!this.worldState.products) this.worldState.products = {};
-            if (!this.worldState.products[from]) this.worldState.products[from] = [];
-            const newProduct = {
-                txId: id,
-                productId: productId,
-                name: name,
-                price: price,
-                description: description,
-                origin: origin,
-                ownerPublicKey: from,
-                timestamp: timestamp,
-                signature: signature
-            };
-            this.worldState.products[from].push(newProduct);
-            console.log(` -> Product ${name} (ID: ${productId}) created by ${from.substring(0,20)}...`);
-        }
-    } else if (chaincodeName === 'order') {
-        if (functionName === 'CreateOrder') {
-            const [orderId, productId, quantity, sellerPublicKey] = originalArgs;
-            if (!this.worldState.orders) this.worldState.orders = {};
-            const newOrder = {
-                txId: id,
-                orderId: orderId,
-                productId: productId,
-                quantity: quantity,
-                buyerPublicKey: from,
-                sellerPublicKey: sellerPublicKey,
-                status: 'PENDING',
-                timestamp: timestamp,
-                signature: signature
-            };
-            this.worldState.orders[orderId] = newOrder;
-            console.log(` -> Order ${orderId} for product ${productId} created by buyer ${from.substring(0,20)}...`);
-        } else if (functionName === 'ConfirmShipment') {
-            const [orderId, trackingNumber] = originalArgs;
-            if (this.worldState.orders && this.worldState.orders[orderId]) {
-                const order = this.worldState.orders[orderId];
-                if (order.status === 'PENDING') {
-                    order.status = 'SHIPPED';
-                    order.trackingNumber = trackingNumber || 'N/A';
-                    order.shippedAt = new Date(timestamp).toISOString();
-                    console.log(` -> Order ${orderId} status updated to SHIPPED.`);
-                } else {
-                    console.warn(` -> Order ${orderId} cannot be shipped. Current status: ${order.status}`);
-                }
-            } else {
-                console.error(` -> Order ${orderId} not found in world state for ConfirmShipment.`);
-            }
-        } else if (functionName === 'ConfirmDelivery') {
-            const [orderId] = originalArgs;
-             if (this.worldState.orders && this.worldState.orders[orderId]) {
-                const order = this.worldState.orders[orderId];
-                if (order.status === 'SHIPPED') {
-                    order.status = 'DELIVERED';
-                    order.deliveredAt = new Date(timestamp).toISOString();
-                    console.log(` -> Order ${orderId} status updated to DELIVERED.`);
-                } else {
-                     console.warn(` -> Order ${orderId} cannot be delivered. Current status: ${order.status}`);
-                }
-            } else {
-                console.error(` -> Order ${orderId} not found in world state for ConfirmDelivery.`);
-            }
-        }
-    } else {
-        console.warn(`[Processing TX ${id}] Unknown chaincode: ${chaincodeName}`);
+    try {
+      if (chaincodeName === 'traceability') {
+          if (functionName === 'RecordEvent') {
+              const [productId, eventType, eventData] = originalArgs;
+              traceabilitySimulator.recordEvent(productId, eventType, eventData, transactionDetails);
+          } else {
+              console.warn(` -> Unknown function in traceability: ${functionName}`);
+          }
+      } else if (chaincodeName === 'reputation') {
+          if (functionName === 'SubmitReview') { // 函数名改为 SubmitReview
+              const [orderId, sellerId, rating, commentHash] = originalArgs;
+              reputationSimulator.submitReview(orderId, sellerId, rating, commentHash, transactionDetails);
+          } else {
+              console.warn(` -> Unknown function in reputation: ${functionName}`);
+          }
+      } else if (chaincodeName === 'product') {
+          if (functionName === 'CreateProduct') {
+              const [productId, name, price, description, origin] = originalArgs;
+              if (!this.worldState.products) this.worldState.products = {};
+              if (!this.worldState.products[from]) this.worldState.products[from] = [];
+              const newProduct = { txId: id, productId, name, price, description, origin, ownerPublicKey: from, timestamp, signature };
+              this.worldState.products[from].push(newProduct);
+              console.log(` -> Product ${name} (ID: ${productId}) created by ${from.substring(0,20)}...`);
+          }
+      } else if (chaincodeName === 'order') {
+          if (functionName === 'CreateOrder') {
+              const [orderId, productId, quantity, sellerPublicKey] = originalArgs;
+              if (!this.worldState.orders) this.worldState.orders = {};
+              const newOrder = { txId: id, orderId, productId, quantity, buyerPublicKey: from, sellerPublicKey, status: 'PENDING', timestamp, signature };
+              this.worldState.orders[orderId] = newOrder;
+              console.log(` -> Order ${orderId} for product ${productId} created by buyer ${from.substring(0,20)}...`);
+          } else if (functionName === 'ConfirmShipment') {
+              const [orderId, trackingNumber] = originalArgs;
+              if (this.worldState.orders && this.worldState.orders[orderId]) {
+                  const order = this.worldState.orders[orderId];
+                  if (order.status === 'PENDING') {
+                      order.status = 'SHIPPED';
+                      order.trackingNumber = trackingNumber || 'N/A';
+                      order.shippedAt = new Date(timestamp).toISOString();
+                      console.log(` -> Order ${orderId} status updated to SHIPPED.`);
+                  } else { console.warn(` -> Order ${orderId} cannot be shipped. Status: ${order.status}`); }
+              } else { console.error(` -> Order ${orderId} not found for ConfirmShipment.`); }
+          } else if (functionName === 'ConfirmDelivery') {
+              const [orderId] = originalArgs;
+              if (this.worldState.orders && this.worldState.orders[orderId]) {
+                  const order = this.worldState.orders[orderId];
+                  if (order.status === 'SHIPPED') {
+                      order.status = 'DELIVERED';
+                      order.deliveredAt = new Date(timestamp).toISOString();
+                      console.log(` -> Order ${orderId} status updated to DELIVERED.`);
+                  } else { console.warn(` -> Order ${orderId} cannot be delivered. Status: ${order.status}`); }
+              } else { console.error(` -> Order ${orderId} not found for ConfirmDelivery.`); }
+          }
+      } else if (chaincodeName === 'dispute_resolution') {
+          if (functionName === 'OpenDispute') {
+              const [orderId, reason, defendantId] = originalArgs;
+              disputeResolutionSimulator.openDispute(orderId, reason, defendantId, transactionDetails);
+          } else if (functionName === 'SubmitEvidence') {
+              const [disputeId, dataHash] = originalArgs;
+              disputeResolutionSimulator.submitEvidence(disputeId, dataHash, transactionDetails);
+          } else if (functionName === 'ResolveDispute') {
+              const [disputeId, decision] = originalArgs;
+              const resolved = disputeResolutionSimulator.resolveDispute(disputeId, decision, transactionDetails);
+              if (resolved) {
+                  // 争议解决后，尝试处理资金流转
+                  const dispute = disputeResolutionSimulator.getDispute(disputeId);
+                  if (dispute && dispute.orderId) {
+                      console.log(`[Processing TX ${id}] Dispute ${disputeId} resolved. Checking decision for token action: ${decision}`);
+                      // 简化处理：根据 decision 关键词决定是退款给买家还是释放给卖家
+                      const decisionLower = decision.toLowerCase();
+                      if (decisionLower.includes('refund') && decisionLower.includes('buyer')) {
+                          try {
+                              tokenSimulator.refundEscrowToBuyer(dispute.orderId);
+                              console.log(` -> Token refunded to buyer for order ${dispute.orderId} based on dispute resolution.`);
+                          } catch (tokenError) {
+                              console.error(` -> FAILED to refund token for order ${dispute.orderId} after dispute resolution:`, tokenError);
+                          }
+                      } else if (decisionLower.includes('release') && decisionLower.includes('seller')) {
+                          try {
+                              tokenSimulator.releaseFromEscrow(dispute.orderId);
+                              console.log(` -> Token released to seller for order ${dispute.orderId} based on dispute resolution.`);
+                          } catch (tokenError) {
+                              console.error(` -> FAILED to release token for order ${dispute.orderId} after dispute resolution:`, tokenError);
+                          }
+                      } else {
+                           console.log(` -> No specific token action triggered by dispute decision: "${decision}"`);
+                      }
+                  }
+              }
+          } else {
+               console.warn(` -> Unknown function in dispute_resolution: ${functionName}`);
+          }
+      } else {
+          console.warn(`[Processing TX ${id}] Unknown chaincode: ${chaincodeName}`);
+      }
+      // 成功处理后，保存 worldState (如果它被修改了，比如 orders)
+      this.saveWorldState(); // 新增一个只保存 worldState 的方法
+    } catch (error) {
+       console.error(`[Processing TX ${id}] Error processing ${chaincodeName}.${functionName}:`, error);
+       // 在模拟环境中，我们通常不停止整个链的处理，只是记录错误
+       // 真实链码中，错误处理会更复杂，可能导致交易失败
     }
   }
 
@@ -319,44 +324,68 @@ class Blockchain {
 
   queryWorldState(chaincodeName, key, subkey = null) {
     console.log(`[Query] Querying world state for ${chaincodeName}, key: ${key}, subkey: ${subkey}`);
-    if (chaincodeName === 'traceability') {
-        return this.worldState.traceability[key] || [];
-    } else if (chaincodeName === 'reputation') {
-        return this.worldState.reputation[key] || [];
-    } else if (chaincodeName === 'product' && key === 'owner') {
-        return this.worldState.products ? (this.worldState.products[subkey] || []) : [];
-    } else if (chaincodeName === 'order' && key === 'id') {
-        return this.worldState.orders ? this.worldState.orders[subkey] : null;
-    } else if (chaincodeName === 'order' && key === 'buyer') {
-        const buyerOrders = [];
-        if (this.worldState.orders) {
-            for (const orderId in this.worldState.orders) {
-                if (this.worldState.orders[orderId].buyerPublicKey === subkey) {
-                    buyerOrders.push(this.worldState.orders[orderId]);
-                }
+    try {
+        if (chaincodeName === 'traceability') {
+            // 假设 key 是 productId
+            return traceabilitySimulator.getTraceability(key);
+        } else if (chaincodeName === 'reputation') {
+            // 假设 key 是 sellerId, subkey 可以是 'reviews' 或 'score' (虽然模拟器现在返回整个对象)
+            if (subkey === 'reviews') {
+                 return reputationSimulator.getSellerReviews(key);
+            } else {
+                 // 返回包含 score, count, reviews 的整个对象
+                 return reputationSimulator.getSellerReputation(key);
             }
-        }
-        return buyerOrders;
-    } else if (chaincodeName === 'order' && key === 'seller') {
-        const sellerOrders = [];
-        if (this.worldState.orders) {
-            for (const orderId in this.worldState.orders) {
-                if (this.worldState.orders[orderId].sellerPublicKey === subkey) {
-                    sellerOrders.push(this.worldState.orders[orderId]);
+        } else if (chaincodeName === 'dispute_resolution') {
+             // 假设 key 是查询类型 ('id' 或 'orderId'), subkey 是对应的 ID
+             if (key === 'id') {
+                 return disputeResolutionSimulator.getDispute(subkey);
+             } else if (key === 'orderId') {
+                 return disputeResolutionSimulator.getDisputesByOrder(subkey);
+             }
+        } else if (chaincodeName === 'product' && key === 'owner') {
+            // 保持 product 查询逻辑 (使用 worldState)
+            return this.worldState.products ? (this.worldState.products[subkey] || []) : [];
+        } else if (chaincodeName === 'order') {
+            // 保持 order 查询逻辑 (使用 worldState)
+             if (key === 'id') {
+                return this.worldState.orders ? this.worldState.orders[subkey] : null;
+            } else if (key === 'buyer' || key === 'seller') {
+                const publicKeyField = key === 'buyer' ? 'buyerPublicKey' : 'sellerPublicKey';
+                const userOrders = [];
+                if (this.worldState.orders) {
+                    for (const orderId in this.worldState.orders) {
+                        if (this.worldState.orders[orderId][publicKeyField] === subkey) {
+                            userOrders.push(this.worldState.orders[orderId]);
+                        }
+                    }
                 }
-            }
+                return userOrders;
+            } 
         }
-        return sellerOrders;
+        console.warn(`[Query] Unknown query type or combination: ${chaincodeName}/${key}/${subkey}`);
+        return null;
+    } catch (error) {
+        console.error(`[Query] Error during query ${chaincodeName}/${key}/${subkey}:`, error);
+        return null;
     }
-    console.warn(`[Query] Unknown query type: ${chaincodeName}/${key}`);
-    return null;
+  }
+
+  // 只保存 World State 文件
+  saveWorldState() {
+      try {
+         fs.writeFileSync(this.stateFile, JSON.stringify(this.worldState, null, 2));
+         // console.log('[Persistence] World state saved to disk.'); // 减少日志噪音
+      } catch (error) {
+         console.error('[Persistence] Error saving world state data:', error);
+      }
   }
 
   saveToDisk() {
     try {
       fs.writeFileSync(this.chainFile, JSON.stringify(this.chain, null, 2));
-      fs.writeFileSync(this.stateFile, JSON.stringify(this.worldState, null, 2));
-      console.log('[Persistence] Blockchain data saved to disk.');
+      this.saveWorldState(); // 调用保存 world state 的方法
+      console.log('[Persistence] Blockchain data (chain & state) saved to disk.');
     } catch (error) {
       console.error('[Persistence] Error saving blockchain data:', error);
     }
@@ -374,21 +403,23 @@ class Blockchain {
           this.chain = [];
       }
       
+      // 加载 worldState (现在主要包含 orders)
       if (fs.existsSync(this.stateFile)) {
         this.worldState = JSON.parse(fs.readFileSync(this.stateFile, 'utf8'));
-        console.log(`[Persistence] World state loaded from ${this.stateFile}.`);
-        this.worldState.traceability = this.worldState.traceability || {};
-        this.worldState.reputation = this.worldState.reputation || {};
-        this.worldState.products = this.worldState.products || {};
-        this.worldState.orders = this.worldState.orders || {};
+        console.log(`[Persistence] World state (orders, products) loaded from ${this.stateFile}.`);
+        // 其他数据由各自模拟器的构造函数加载
+        // this.worldState.traceability = ...; // 移除
+        // this.worldState.reputation = ...; // 移除
+        this.worldState.products = this.worldState.products || {}; // 保留
+        this.worldState.orders = this.worldState.orders || {}; // 保留
       } else {
-          this.worldState = { traceability: {}, reputation: {}, products: {}, orders: {} };
+          this.worldState = { products: {}, orders: {} };
       }
 
       if (this.chain.length > 1 && !this.isChainValid()) {
         console.error("[Persistence] Loaded chain is invalid! Resetting to genesis block.");
         this.chain = [this.createGenesisBlock()];
-        this.worldState = { traceability: {}, reputation: {}, products: {}, orders: {} };
+        this.worldState = { products: {}, orders: {} };
         this.saveToDisk();
       } else if (this.chain.length > 0) {
           console.log("[Persistence] Loaded chain is valid.");
@@ -398,7 +429,7 @@ class Blockchain {
       console.error('[Persistence] Error loading blockchain data:', error);
       this.chain = this.chain || [];
       if (this.chain.length === 0) this.chain.push(this.createGenesisBlock());
-      this.worldState = { traceability: {}, reputation: {}, products: {}, orders: {} };
+      this.worldState = { products: {}, orders: {} };
     }
   }
 }

@@ -7,17 +7,27 @@
     <% if (product.qrCodeData) { %>
       <div class="card mt-3">
         <div class="card-header">
-          <h5 class="mb-0">商品溯源二维码</h5>
+          <h5 class="mb-0">商品溯源</h5>
         </div>
         <div class="card-body text-center">
-          <div class="qr-container">
-            <img src="<%= product.qrCodeData %>" alt="Trace QR Code">
+          <p class="card-text">以下二维码或按钮可用于查看链上溯源信息。</p>
+          <div class="qr-container mb-2">
+            <img src="<%= product.qrCodeData %>" alt="Trace QR Code" style="max-width: 150px;">
           </div>
-          <p class="card-text">扫描二维码查看商品溯源信息</p>
-          <a href="/trace/<%= product.blockchainProductId %>" class="btn btn-outline-primary" target="_blank">直接查看溯源信息</a>
+          <!-- 按钮触发 AJAX 查询 -->
+          <button id="viewTraceBtn" class="btn btn-info" data-product-id="<%= product.blockchainProductId %>">查询链上溯源事件</button>
         </div>
       </div>
     <% } %>
+
+    <!-- 溯源信息展示区域 -->
+    <div id="traceInfoContainer" class="mt-3" style="display: none;">
+      <h5>溯源事件记录 (<span id="eventCount">0</span> 条):</h5>
+      <ul id="traceEventsList" class="list-group"></ul>
+      <div id="traceError" class="alert alert-danger mt-2" style="display: none;"></div>
+      <div id="traceLoading" class="mt-2" style="display: none;">正在加载...</div>
+    </div>
+
   </div>
   
   <div class="col-md-6">
@@ -32,6 +42,17 @@
     <div class="mb-3">
       <h5>卖家信息</h5>
       <p><%= seller.name %> <% if (seller.publicKey) { %>(公钥: <%= seller.publicKey.substring(0, 30) %>...) <% } %></p>
+      <!-- 添加信誉显示区域 -->
+      <div id="sellerReputationDisplay">
+        <% if (sellerReputation) { %>
+          <small>
+            信誉评分: <%= sellerReputation.score ? sellerReputation.score.toFixed(1) : 'N/A' %> / 5 
+            (<%= sellerReputation.count || 0 %> 条评价)
+          </small>
+        <% } else { %>
+          <small class="text-muted">暂无信誉信息</small>
+        <% } %>
+      </div>
     </div>
     
     <div class="mb-3">
@@ -55,7 +76,7 @@
         </div>
 
         <div class="mb-3">
-          <label for="password" class="form-label">您的密码 (用于签名)</label>
+          <label for="password" class="form-label">您的密码 (用于支付)</label>
           <input type="password" class="form-control" id="password" name="password" required>
           <div id="passwordHelp" class="form-text text-danger">仅用于模拟环境以进行交易签名，请勿在生产环境中使用。</div>
         </div>
@@ -76,4 +97,79 @@
   </div>
 </div>
 
-<%- include('../partials/footer') %> 
+<%- include('../partials/footer') %>
+
+<!-- 客户端脚本 -->
+<script>
+  const viewTraceBtn = document.getElementById('viewTraceBtn');
+  const traceInfoContainer = document.getElementById('traceInfoContainer');
+  const traceEventsList = document.getElementById('traceEventsList');
+  const eventCountSpan = document.getElementById('eventCount');
+  const traceErrorDiv = document.getElementById('traceError');
+  const traceLoadingDiv = document.getElementById('traceLoading');
+
+  if (viewTraceBtn) {
+    viewTraceBtn.addEventListener('click', async () => {
+      const productId = viewTraceBtn.dataset.productId;
+      if (!productId) {
+        traceErrorDiv.textContent = '无法获取商品溯源ID。';
+        traceErrorDiv.style.display = 'block';
+        return;
+      }
+
+      // 重置状态
+      traceEventsList.innerHTML = '';
+      traceErrorDiv.style.display = 'none';
+      traceLoadingDiv.style.display = 'block';
+      traceInfoContainer.style.display = 'block';
+      eventCountSpan.textContent = '0';
+
+      try {
+        const response = await fetch(`/api/traceability/${productId}`);
+        traceLoadingDiv.style.display = 'none'; // 隐藏加载提示
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: `请求失败，状态码：${response.status}` }));
+          throw new Error(errorData.message || `请求失败，状态码：${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.success && Array.isArray(data.events)) {
+          eventCountSpan.textContent = data.events.length;
+          if (data.events.length === 0) {
+            traceEventsList.innerHTML = '<li class="list-group-item">暂无溯源事件记录。</li>';
+          } else {
+            // 对事件按时间戳排序 (假设模拟链是按顺序添加的，但最好排序)
+            data.events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            data.events.forEach(event => {
+              const listItem = document.createElement('li');
+              listItem.classList.add('list-group-item');
+              
+              const eventTime = new Date(event.timestamp).toLocaleString();
+              const actor = event.actorPublicKey ? event.actorPublicKey.substring(0, 20) + '...' : '未知';
+              const eventDataStr = event.eventData ? JSON.stringify(event.eventData) : '';
+
+              listItem.innerHTML = `
+                <strong>${event.eventType}</strong> - ${eventTime}<br>
+                <small>操作者: ${actor}</small><br>
+                ${eventDataStr ? `<small>数据: ${eventDataStr}</small><br>` : ''}
+                <small>交易ID: ${event.txId ? event.txId.substring(0, 16) + '...' : 'N/A'}</small>
+              `;
+              traceEventsList.appendChild(listItem);
+            });
+          }
+        } else {
+          throw new Error(data.message || '获取溯源信息失败，响应格式不正确。');
+        }
+
+      } catch (error) {
+        console.error('Error fetching traceability:', error);
+        traceLoadingDiv.style.display = 'none';
+        traceErrorDiv.textContent = `加载溯源信息失败: ${error.message}`;
+        traceErrorDiv.style.display = 'block';
+      }
+    });
+  }
+</script> 

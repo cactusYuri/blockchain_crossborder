@@ -10,10 +10,7 @@
         <% if (order.status === 'delivered') { %>bg-info<% } %>
         <% if (order.status === 'reviewed') { %>bg-success<% } %>
         fs-6" id="order-status-badge">
-        <% if (order.status === 'pending') { %>待发货<% } %>
-        <% if (order.status === 'shipped') { %>已发货<% } %>
-        <% if (order.status === 'delivered') { %>已送达<% } %>
-        <% if (order.status === 'reviewed') { %>已评价<% } %>
+        <%= order.status %> <%# 直接显示状态，更灵活 %>
       </span>
     </div>
   </div>
@@ -23,7 +20,7 @@
         <h5>订单信息</h5>
         <p><strong>订单编号:</strong> <%= order.id %></p>
         <p><strong>创建时间:</strong> <%= new Date(order.createdAt).toLocaleString() %></p>
-        <p><strong>总价:</strong> ¥<%= order.totalPrice.toFixed(2) %></p>
+        <p><strong>总价:</strong> <%= order.totalPrice.toFixed(2) %> DEMO </p> <%# 标记为 DEMO %>
         <p><strong>数量:</strong> <%= order.quantity %></p>
         
         <% if (order.shippedAt) { %>
@@ -31,8 +28,12 @@
           <p><strong>物流单号:</strong> <%= order.trackingNumber || 'N/A' %></p>
         <% } %>
         
-        <% if (order.reviewedAt) { %>
-          <p><strong>评价时间:</strong> <%= new Date(order.reviewedAt).toLocaleString() %></p>
+        <% if (order.deliveredAt) { %>
+          <p><strong>送达时间:</strong> <%= new Date(order.deliveredAt).toLocaleString() %></p>
+        <% } %>
+
+        <% if (order.blockchainTxId) { %>
+           <p><strong>链上交易ID (创建):</strong> <small><%= order.blockchainTxId.substring(0,16) %>...</small></p>
         <% } %>
       </div>
       
@@ -45,7 +46,6 @@
             <p class="text-primary">¥<%= product.price.toFixed(2) %> × <%= order.quantity %></p>
             <p><strong>卖家:</strong> <span id="merchant-name"><%= seller.name %></span> (<span id="merchant-id" data-id="<%= seller.id %>">ID: <%= seller.id.substring(0,8) %></span>)</p>
             <div id="merchant-reputation">
-              <!-- 信誉信息将由 JS 填充 -->
               <small class="text-muted">正在加载商家信誉...</small>
             </div>
           </div>
@@ -61,49 +61,46 @@
       </div>
     </div>
     
-    <!-- DEBUG START -->
-    <!-- 
-        Order Status: <%= order.status %> (Expected: 'pending')
-        User Logged In: <%= !!user %> (Expected: true)
-        User ID: <%= user ? user.id : 'N/A' %>
-        Product Found: <%= !!product %> (Expected: true)
-        Product Seller ID: <%= product ? product.sellerId : 'N/A' %>
-        Condition (user.id === product.sellerId): <%= user && product ? (user.id === product.sellerId) : 'N/A' %> 
-    -->
-    <!-- DEBUG END -->
-    
-    <% if (order.status && order.status.toLowerCase() === 'pending' && user && product && user.id === product.sellerId) { %>
-      <hr>
+    <hr>
+
+    <%# --- 卖家操作 --- %>
+    <% if (order.status === 'pending' && user && user.id === order.sellerId) { %>
       <h5>卖家操作</h5>
       <form action="/orders/<%= order.id %>/ship" method="POST" class="mb-3">
         <div class="mb-3">
           <label for="trackingNumber" class="form-label">物流单号</label>
           <input type="text" class="form-control" id="trackingNumber" name="trackingNumber" placeholder="输入物流单号（可选）">
         </div>
+        <div class="mb-3">
+          <label for="shipPassword" class="form-label">您的密码 (用于签名)</label>
+          <input type="password" class="form-control" id="shipPassword" name="password" required>
+        </div>
         <button type="submit" class="btn btn-primary">确认发货</button>
       </form>
     <% } %>
 
-    <%# 买家确认收货按钮 %>
-    <% if (order.status && order.status.toLowerCase() === 'shipped' && user && user.id === order.buyerId) { %>
-        <hr>
-        <h5>买家操作</h5>
+    <%# --- 买家操作 --- %>
+    <% if (user && user.id === order.buyerId) { %>
+      <h5>买家操作</h5>
+      <%# 确认收货 %>
+      <% if (order.status === 'shipped') { %>
         <form action="/orders/<%= order.id %>/deliver" method="POST" class="mb-3">
+             <div class="mb-3">
+               <label for="deliverPassword" class="form-label">您的密码 (用于签名)</label>
+               <input type="password" class="form-control" id="deliverPassword" name="password" required>
+             </div>
             <button type="submit" class="btn btn-success">确认收货</button>
             <small class="ms-2 text-muted">确认您已收到商品</small>
         </form>
-    <% } %>
+      <% } %>
 
-    <hr>
-    <!-- 评价区域 -->
-    <div id="review-section">
-        <h5>买家评价</h5>
-        <!-- 评价表单 (仅在特定条件下由JS显示) -->
-        <form id="review-form" style="display: none;" data-order-id="<%= order.id %>" data-merchant-id="<%= seller.id %>">
+      <%# 评价订单 - 仅在 delivered 状态下且未评价时显示表单 %>
+      <div id="review-section" class="mt-3">
+        <h6>评价订单</h6>
+        <form id="review-form" style="display: none;" data-order-id="<%= order.id %>" data-seller-id="<%= seller.id %>">
             <div class="mb-3">
-                <label for="rating" class="form-label">评分</label>
-                <div id="rating-stars">
-                    <!-- 星星将由 JS 生成 -->
+                <label class="form-label d-block">评分</label> <%# 使用 d-block %>
+                <div id="rating-stars" class="mb-2">
                     <input type="radio" name="rating" id="rating-5" value="5" required><label for="rating-5">★</label>
                     <input type="radio" name="rating" id="rating-4" value="4"><label for="rating-4">★</label>
                     <input type="radio" name="rating" id="rating-3" value="3"><label for="rating-3">★</label>
@@ -112,47 +109,51 @@
                 </div>
             </div>
             <div class="mb-3">
-              <label for="comment" class="form-label">评价内容</label>
-              <textarea class="form-control" id="comment" name="comment" rows="3"></textarea> <!-- required 移除，允许空评论？API里允许了 -->
+              <label for="comment" class="form-label">评价内容 (可选)</label>
+              <textarea class="form-control" id="comment" name="comment" rows="3"></textarea>
             </div>
-            <div class="alert alert-info">
-              <small>提示：评价提交后将记录在模拟的"区块链"账本（JSON文件）中。</small>
+            <div class="mb-3">
+               <label for="reviewPassword" class="form-label">您的密码 (用于签名)</label>
+               <input type="password" class="form-control" id="reviewPassword" name="password" required>
             </div>
             <button type="submit" class="btn btn-primary">提交评价</button>
-            <div id="review-message" class="mt-2"></div> <!-- 用于显示提交反馈 -->
+            <div id="review-message" class="mt-2"></div>
         </form>
+        <div id="review-display" class="mt-2" style="display: none;"></div>
+        <div id="review-loading" class="text-muted"></div>
+      </div>
+    <% } %>
 
-        <!-- 显示已存在的评价 (由JS填充) -->
-        <div id="existing-review" style="display: none;">
-            <div class="card">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div>
-                            <span id="review-rating-display" class="text-warning"></span>
-                            <span id="review-rating-text" class="ms-2"></span>
-                        </div>
-                        <small id="review-timestamp" class="text-muted"></small>
-                    </div>
-                    <p id="review-comment-display"></p>
-                    <div class="alert alert-success">
-                        <small>评价已记录。</small>
-                    </div>
-                </div>
-            </div>
+    <%# --- 通用操作区域 (买卖双方或管理员可见) --- %>
+    <hr>
+    <div id="dispute-section" data-disputes="<%- JSON.stringify(disputes || []).replace(/'/g, '\\'').replace(/"/g, '\'') %>"> <%# 将数据存储在 data 属性中，转义引号 %>
+        <h5>交易争议</h5>
+        <div id="disputes-list" class="mb-3">
+             <%# 争议列表将由 JS 填充 %>
+             <p class="text-muted">正在加载争议信息...</p>
         </div>
-
-        <!-- 显示加载状态或提示信息 -->
-        <div id="review-loading" class="text-muted">
-            正在检查评价状态...
-        </div>
-    </div>
-
-    <!-- 可以再加一个显示该商家其他评价的区域 -->
-    <div id="merchant-reviews-section" class="mt-4">
-        <h5>来自卖家 "<%= seller.name %>" 的其他评价</h5>
-        <div id="merchant-reviews-list" class="list-group">
-            <p class="text-muted">正在加载评价列表...</p>
-        </div>
+        <%# 仅当用户是订单参与方且状态允许时才显示发起按钮 %>
+        <% if (user && (user.id === order.buyerId || user.id === order.sellerId) && ['shipped', 'delivered', 'reviewed'].includes(order.status)) { %>
+            <button id="open-dispute-btn" class="btn btn-warning btn-sm" style="display: none;"> <%# JS 会根据是否已有争议来显示 %>
+              <i class="fas fa-exclamation-triangle"></i> 发起争议
+            </button>
+            <form id="open-dispute-form" class="mt-2 border p-3 rounded bg-light" style="display: none;" data-order-id="<%= order.id %>" data-defendant-id="<%= user.id === order.buyerId ? seller.id : buyer.id %>">
+                 <h6>发起新争议</h6>
+                 <div class="mb-3">
+                    <label for="disputeReason" class="form-label">争议原因</label>
+                    <textarea class="form-control" id="disputeReason" name="reason" rows="3" required></textarea>
+                 </div>
+                 <div class="mb-3">
+                    <label for="disputePassword" class="form-label">您的密码 (用于签名)</label>
+                    <input type="password" class="form-control" id="disputePassword" name="password" required>
+                 </div>
+                 <button type="submit" class="btn btn-danger">确认发起</button>
+                 <button type="button" class="btn btn-secondary ms-2" onclick="document.getElementById('open-dispute-form').style.display='none'; document.getElementById('open-dispute-btn').style.display='inline-block';">取消</button>
+                 <div id="dispute-message" class="mt-2"></div>
+            </form>
+        <% } else if (user && (user.id === order.buyerId || user.id === order.sellerId)) { %>
+            <p class="text-muted"><small>订单当前状态 (<%= order.status %>) 不支持发起争议。</small></p>
+        <% } %>
     </div>
 
   </div>
@@ -176,7 +177,6 @@
     cursor: pointer;
     padding: 0 2px;
 }
-/* 鼠标悬停时点亮星星 */
 #rating-stars label:hover,
 #rating-stars label:hover ~ label,
 #rating-stars input[type="radio"]:checked ~ label {
@@ -186,203 +186,234 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', async () => {
+    const orderId = "<%= order.id %>";
+    const sellerId = "<%= seller.id %>";
+    const buyerId = "<%= buyer.id %>";
+    const currentUserId = "<%= user ? user.id : null %>";
+    const orderStatus = "<%= order.status %>";
+
     const reviewSection = document.getElementById('review-section');
     const reviewForm = document.getElementById('review-form');
-    const existingReviewDiv = document.getElementById('existing-review');
+    const reviewDisplayDiv = document.getElementById('review-display');
     const reviewLoadingDiv = document.getElementById('review-loading');
     const reviewMessageDiv = document.getElementById('review-message');
     const merchantReputationDiv = document.getElementById('merchant-reputation');
-    const merchantReviewsListDiv = document.getElementById('merchant-reviews-list');
-    const orderStatus = document.getElementById('order-status-badge').textContent.trim();
 
-    const orderId = reviewForm.dataset.orderId;
-    const merchantId = reviewForm.dataset.merchantId;
-    const currentUserId = "<%= user ? user.id : null %>"; // 从 EJS 获取当前用户 ID
+    const disputeSection = document.getElementById('dispute-section');
+    const disputesListDiv = document.getElementById('disputes-list');
+    const openDisputeBtn = document.getElementById('open-dispute-btn');
+    const openDisputeForm = document.getElementById('open-dispute-form');
+    const disputeMessageDiv = document.getElementById('dispute-message');
 
-    let hasUserReviewedThisOrder = false;
+    let sellerReputation = null;
+    // 从 data 属性读取并解析争议数据
+    let orderDisputes = []; 
+    try {
+        const disputesDataString = disputeSection.dataset.disputes.replace(/\'/g, '"'); // 替换回双引号
+        orderDisputes = JSON.parse(disputesDataString || '[]');
+    } catch (e) {
+        console.error("Failed to parse disputes data:", e);
+        disputesListDiv.innerHTML = '<p class="text-danger">加载争议信息时出错 (数据解析失败)。</p>';
+    }
+    let userHasReviewed = false;
 
-    // --- 1. 加载商家信誉 --- 
+    // --- 加载商家信誉 --- 
     async function loadMerchantReputation() {
+        merchantReputationDiv.innerHTML = '<small class="text-muted">正在加载商家信誉...</small>';
         try {
-            const response = await fetch(`/api/reviews/reputation/${merchantId}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            const response = await fetch(`/api/reviews/reputation/${sellerId}`);
+            if (!response.ok) throw new Error('Failed to fetch reputation');
+            const result = await response.json();
+            if (result.success) {
+                sellerReputation = result.reputation;
+                const score = sellerReputation.score ? sellerReputation.score.toFixed(1) : 'N/A';
+                const count = sellerReputation.count || 0;
+                merchantReputationDiv.innerHTML = `
+                    <small>信誉: ${score}/5 (${count}条评价)</small>
+                `;
+                // 检查用户是否已评价
+                if (sellerReputation.reviews && currentUserId) {
+                    userHasReviewed = sellerReputation.reviews.some(r => r.orderId === orderId && r.buyerPublicKey === "<%= user ? user.publicKey : '' %>");
+                }
+            } else {
+                 merchantReputationDiv.innerHTML = '<small class="text-danger">加载信誉失败</small>';
             }
-            const reputation = await response.json();
-            let starsHtml = '';
-            const avgRating = parseFloat(reputation.averageRating);
-            const fullStars = Math.floor(avgRating);
-            const halfStar = avgRating - fullStars >= 0.5 ? 1 : 0;
-            const emptyStars = 5 - fullStars - halfStar;
-
-            for(let i=0; i<fullStars; i++) starsHtml += '<span class="text-warning">★</span>';
-            // 简单处理，不显示半星
-            // if(halfStar) starsHtml += '<span class="text-warning">☆</span>'; // Placeholder for half star
-            for(let i=0; i<5-fullStars; i++) starsHtml += '<span class="text-secondary">☆</span>';
-
-            merchantReputationDiv.innerHTML = `
-                <span>${starsHtml}</span>
-                <span class="ms-1">${reputation.averageRating}</span>
-                <small class="text-muted">(${reputation.reviewCount} 条评价)</small>
-            `;
         } catch (error) {
             console.error('Error fetching merchant reputation:', error);
-            merchantReputationDiv.innerHTML = '<small class="text-danger">无法加载商家信誉</small>';
+            merchantReputationDiv.innerHTML = '<small class="text-danger">加载信誉失败</small>';
         }
     }
 
-    // --- 2. 加载商家所有评价列表 --- 
-    async function loadMerchantReviews() {
-        try {
-            const response = await fetch(`/api/reviews/merchant/${merchantId}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const reviews = await response.json();
-            merchantReviewsListDiv.innerHTML = ''; // 清空加载提示
+    // --- 检查和显示评价区域 --- 
+    function checkReviewDisplay() {
+        if (!reviewSection || !currentUserId || currentUserId !== buyerId) {
+             if(reviewLoadingDiv) reviewLoadingDiv.style.display = 'none';
+             return; // 非买家不处理评价
+        }
 
-            if (reviews.length === 0) {
-                merchantReviewsListDiv.innerHTML = '<p class="text-muted">该商家暂无评价。</p>';
+        reviewLoadingDiv.textContent = '检查评价状态...';
+        const existingReview = sellerReputation?.reviews?.find(r => r.orderId === orderId);
+
+        if (existingReview) {
+            reviewLoadingDiv.style.display = 'none';
+            reviewForm.style.display = 'none';
+            reviewDisplayDiv.style.display = 'block';
+            let starsHtml = '';
+            for(let i=0; i<5; i++) { starsHtml += i < existingReview.rating ? '<span class="text-warning">★</span>' : '<span class="text-secondary">☆</span>'; }
+            reviewDisplayDiv.innerHTML = `
+                <p><strong>您的评价 (${new Date(existingReview.timestamp).toLocaleString()}):</strong></p>
+                <p>${starsHtml} (${existingReview.rating}/5)</p>
+                <p>${existingReview.commentHash ? '评论内容已记录 (哈希: ' + existingReview.commentHash.substring(0,10) + '...)' : '未填写评论。'}</p>
+                <p><small>交易ID: ${existingReview.txId.substring(0,16)}...</small></p>
+                <span class="badge bg-success">已评价</span>
+            `;
+        } else if (orderStatus === 'delivered') {
+            reviewLoadingDiv.style.display = 'none';
+            reviewForm.style.display = 'block';
+            reviewDisplayDiv.style.display = 'none';
+        } else {
+            reviewLoadingDiv.textContent = '订单状态非"已送达"，暂不能评价。';
+            reviewForm.style.display = 'none';
+            reviewDisplayDiv.style.display = 'none';
+        }
+    }
+
+    // --- 处理评价表单提交 --- 
+    if (reviewForm) {
+        reviewForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            reviewMessageDiv.textContent = '正在提交...';
+            reviewMessageDiv.className = 'mt-2 alert alert-info';
+
+            const ratingInput = reviewForm.querySelector('input[name="rating"]:checked');
+            const rating = ratingInput ? ratingInput.value : null;
+            const comment = reviewForm.querySelector('#comment').value;
+            const password = reviewForm.querySelector('#reviewPassword').value;
+
+            if (!rating) {
+                reviewMessageDiv.textContent = '请选择评分！';
+                reviewMessageDiv.className = 'mt-2 alert alert-danger';
                 return;
             }
-
-            reviews.forEach(review => {
-                 // 检查当前用户是否评价过此订单
-                if (review.orderId === orderId && review.userId === currentUserId) {
-                    hasUserReviewedThisOrder = true;
-                    displayExistingReview(review); // 如果找到当前用户的评价，直接显示
-                }
-
-                const reviewElement = document.createElement('div');
-                reviewElement.className = 'list-group-item list-group-item-action flex-column align-items-start mb-2';
-                
-                let starsHtml = '';
-                for(let i=0; i<5; i++) {
-                    starsHtml += i < review.rating ? '<span class="text-warning">★</span>' : '<span class="text-secondary">☆</span>';
-                }
-
-                reviewElement.innerHTML = `
-                    <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">用户: ${review.userId.substring(0, 8)}...</h6>
-                        <small>${new Date(review.timestamp).toLocaleString()}</small>
-                    </div>
-                    <p class="mb-1">${starsHtml} (${review.rating}/5)</p>
-                    <p class="mb-1">${review.comment || '用户未填写评论内容'}</p>
-                    <small>订单: ${review.orderId.substring(0, 8)}...</small>
-                `;
-                merchantReviewsListDiv.appendChild(reviewElement);
-            });
-
-            // 检查完所有评价后，决定是否显示评价表单
-            checkAndShowReviewForm();
-
-        } catch (error) {
-            console.error('Error fetching merchant reviews:', error);
-            merchantReviewsListDiv.innerHTML = '<p class="text-danger">无法加载评价列表。</p>';
-            reviewLoadingDiv.style.display = 'none'; // 隐藏加载提示
-        }
-    }
-
-    // --- 3. 显示已评价内容 --- 
-    function displayExistingReview(review) {
-        reviewLoadingDiv.style.display = 'none';
-        reviewForm.style.display = 'none';
-        existingReviewDiv.style.display = 'block';
-        
-        let starsHtml = '';
-        for(let i=0; i<5; i++) {
-            starsHtml += i < review.rating ? '<span class="text-warning">★</span>' : '<span class="text-secondary">☆</span>';
-        }
-        document.getElementById('review-rating-display').innerHTML = starsHtml;
-        document.getElementById('review-rating-text').textContent = `${review.rating}/5`;
-        document.getElementById('review-timestamp').textContent = new Date(review.timestamp).toLocaleString();
-        document.getElementById('review-comment-display').textContent = review.comment || '用户未填写评论内容';
-        hasUserReviewedThisOrder = true; // 标记已评价
-    }
-
-    // --- 4. 检查是否显示评价表单 --- 
-    function checkAndShowReviewForm() {
-        reviewLoadingDiv.style.display = 'none'; // 隐藏加载提示
-        // 条件：订单状态已送达或已评价，当前是买家，且尚未评价此订单
-        const canReview = ['已送达', '已评价'].includes(orderStatus) && currentUserId && currentUserId === "<%= buyer.id %>";
-
-        if (canReview && !hasUserReviewedThisOrder) {
-            existingReviewDiv.style.display = 'none';
-            reviewForm.style.display = 'block';
-        } else if (hasUserReviewedThisOrder) {
-            // 如果已评价，确保显示的是已评价内容而不是表单
-        } else {
-            // 不满足评价条件
-            existingReviewDiv.style.display = 'none';
-            reviewForm.style.display = 'none';
-            // 检查 reviewSection 是否仍然存在，避免在已添加提示后再次添加
-            if (!reviewSection.querySelector('.cannot-review-message')) {
-                 const noReviewMsg = document.createElement('p');
-                 noReviewMsg.className = 'text-muted cannot-review-message';
-                 noReviewMsg.textContent = '订单完成后或当前状态下无法评价。';
-                 reviewSection.appendChild(noReviewMsg);
-            }
-        }
-    }
-
-    // --- 5. 处理表单提交 --- 
-    reviewForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        reviewMessageDiv.textContent = '正在提交...';
-        reviewMessageDiv.className = 'mt-2 alert alert-info';
-
-        const ratingInput = reviewForm.querySelector('input[name="rating"]:checked');
-        const rating = ratingInput ? ratingInput.value : null;
-        const comment = document.getElementById('comment').value;
-
-        if (!rating) {
-            reviewMessageDiv.textContent = '请选择评分！';
-            reviewMessageDiv.className = 'mt-2 alert alert-danger';
-            return;
-        }
-
-        const reviewData = {
-            merchantId: merchantId,
-            orderId: orderId,
-            rating: parseInt(rating, 10),
-            comment: comment,
-            // userId 会在后端从 session 获取，或者如果需要前端传就这样加
-            // userId: currentUserId 
-        };
-
-        try {
-            const response = await fetch('/api/reviews', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(reviewData),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.message || `HTTP error! status: ${response.status}`);
+            if (!password) {
+                 reviewMessageDiv.textContent = '请输入密码！';
+                 reviewMessageDiv.className = 'mt-2 alert alert-danger';
+                 return;
             }
 
-            reviewMessageDiv.textContent = '评价提交成功！';
-            reviewMessageDiv.className = 'mt-2 alert alert-success';
-            // 提交成功后，隐藏表单，显示评价内容，并更新商家信誉和列表
-            displayExistingReview(result); 
-            loadMerchantReputation(); // 重新加载信誉
-            loadMerchantReviews(); // 重新加载列表（会包含新评价）
+            try {
+                const response = await fetch('/api/reviews', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId, rating, comment, password }),
+                });
+                const result = await response.json();
 
-        } catch (error) {
-            console.error('Error submitting review:', error);
-            reviewMessageDiv.textContent = `评价提交失败: ${error.message}`;
-            reviewMessageDiv.className = 'mt-2 alert alert-danger';
-        }
-    });
+                if (!response.ok || !result.success) {
+                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
+                }
+
+                reviewMessageDiv.textContent = '评价提交成功！';
+                reviewMessageDiv.className = 'mt-2 alert alert-success';
+                reviewForm.style.display = 'none'; // 隐藏表单
+                // 重新加载信誉并显示评价
+                await loadMerchantReputation();
+                checkReviewDisplay();
+
+            } catch (error) {
+                console.error('Error submitting review:', error);
+                reviewMessageDiv.textContent = `评价提交失败: ${error.message}`;
+                reviewMessageDiv.className = 'mt-2 alert alert-danger';
+            }
+        });
+    }
+
+    // --- 加载/显示争议信息 (使用从 EJS 传入的数据) --- 
+    function displayDisputes() {
+         disputesListDiv.innerHTML = ''; // 清空加载提示
+         if (orderDisputes.length === 0) {
+              disputesListDiv.innerHTML = '<p class="text-muted">此订单暂无争议记录。</p>';
+         } else {
+             orderDisputes.forEach(dispute => {
+                 const disputeElement = document.createElement('div');
+                 let statusClass = 'alert-warning';
+                 if (dispute.status === 'RESOLVED') statusClass = 'alert-success';
+                 if (dispute.status === 'OPEN' || dispute.status === 'EVIDENCE_GATHERING') statusClass = 'alert-danger';
+                 
+                 disputeElement.className = `alert ${statusClass}`;
+                 disputeElement.innerHTML = `
+                    <strong>争议 #${dispute.disputeId ? dispute.disputeId.substring(0,8) : 'N/A'}...</strong> (状态: ${dispute.status})<br>
+                    原因: ${dispute.reason}<br>
+                    <small>发起时间: ${new Date(dispute.createdAt || dispute.timestamp).toLocaleString()}</small><br>
+                    <a href="/disputes/${dispute.disputeId}" target="_blank" class="btn btn-sm btn-outline-secondary mt-1">查看详情与处理</a>
+                 `; 
+                 disputesListDiv.appendChild(disputeElement);
+             });
+         }
+         // 控制发起争议按钮的显示
+         if (openDisputeBtn) {
+             // 仅在没有争议时显示发起按钮
+             openDisputeBtn.style.display = orderDisputes.length === 0 ? 'inline-block' : 'none';
+         }
+    }
+
+    // --- 处理发起争议 --- 
+    if (openDisputeBtn) {
+        openDisputeBtn.addEventListener('click', () => {
+            openDisputeForm.style.display = 'block';
+            openDisputeBtn.style.display = 'none'; // 点击后隐藏按钮
+        });
+    }
+    if (openDisputeForm) {
+         openDisputeForm.addEventListener('submit', async (event) => {
+             event.preventDefault();
+             disputeMessageDiv.textContent = '正在提交...';
+             disputeMessageDiv.className = 'mt-2 alert alert-info';
+
+             const reason = openDisputeForm.querySelector('#disputeReason').value;
+             const password = openDisputeForm.querySelector('#disputePassword').value;
+             const defendantId = openDisputeForm.dataset.defendantId;
+             const formOrderId = openDisputeForm.dataset.orderId; // 从表单获取 orderId
+
+             if (!reason || !password) {
+                 disputeMessageDiv.textContent = '请填写原因和密码！';
+                 disputeMessageDiv.className = 'mt-2 alert alert-danger';
+                 return;
+             }
+
+             try {
+                 const response = await fetch('/api/disputes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId: formOrderId, reason, defendantId, password }),
+                 });
+                 const result = await response.json();
+                 if (!response.ok || !result.success) {
+                     throw new Error(result.message || `HTTP error! status: ${response.status}`);
+                 }
+                 disputeMessageDiv.textContent = '争议已成功发起！请稍后刷新页面查看，或前往争议详情页处理。 TX ID: ' + result.transactionId;
+                 disputeMessageDiv.className = 'mt-2 alert alert-success';
+                 openDisputeForm.reset();
+                 openDisputeForm.style.display = 'none'; // 隐藏表单
+                 // 不需要在这里刷新争议列表，因为没有返回新的 disputeId
+                 // loadDisputes(); // 如果 API 返回了新 dispute 对象可以取消注释
+
+             } catch (error) {
+                 console.error('Error opening dispute:', error);
+                 disputeMessageDiv.textContent = `发起争议失败: ${error.message}`;
+                 disputeMessageDiv.className = 'mt-2 alert alert-danger';
+                 // 出错时，重新显示发起按钮
+                  if (openDisputeBtn && orderDisputes.length === 0) {
+                      openDisputeBtn.style.display = 'inline-block';
+                  }
+             }
+         });
+    }
 
     // --- 初始化加载 --- 
-    loadMerchantReputation();
-    loadMerchantReviews(); // 这个函数会检查并决定是否显示表单
-
+    await loadMerchantReputation();
+    checkReviewDisplay(); 
+    displayDisputes(); // 直接使用 EJS 传入的数据显示争议
 });
 </script>
 

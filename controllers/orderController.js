@@ -233,13 +233,13 @@ exports.createOrder = async (req, res) => {
 };
 
 // 查看单个订单详情
-exports.getOrderDetail = (req, res) => {
+exports.getOrderDetail = async (req, res) => {
   const orderId = req.params.id;
   if (!req.session.user || !req.session.user.id) {
     return res.redirect('/auth/login');
   }
   const userId = req.session.user.id;
-  const user = req.session.user; // Get the full user object
+  const user = req.session.user; 
 
   const order = global.orders.find(o => o.id === orderId);
   if (!order) {
@@ -251,55 +251,37 @@ exports.getOrderDetail = (req, res) => {
     });
   }
 
-  // 查找产品 (本地)
   const product = global.products.find(p => p.id === order.productId);
-   if (!product) {
-    // 即使找不到产品，也继续渲染，但在日志中记录
-    console.warn(`[getOrderDetail] Product ${order.productId} for order ${orderId} not found in global.products.`);
+  if (!product) {
+    console.warn(`[getOrderDetail] Product ${order.productId} for order ${orderId} not found.`);
   }
 
-  /* 移除前端权限检查
-  if (userId !== order.buyerId && userId !== order.sellerId) {
-    return res.status(403).render('error', { ... });
-  }
-  */
-
-  // 查找用户信息 (本地)
   const buyer = global.users.find(u => u.id === order.buyerId);
   const seller = global.users.find(u => u.id === order.sellerId);
+  // const review = global.reviews ? global.reviews.find(r => r.orderId === orderId) : null; // 评价信息从信誉链码获取，这里不再需要
 
-  // 查找是否已有评价 (本地)
-  const review = global.reviews ? global.reviews.find(r => r.orderId === orderId) : null;
-
-  // --- 在渲染前打印调试日志 --- 
-  console.log('--- [DEBUG] Checking conditions for showing ship button ---');
-  console.log(`Order ID: ${orderId}`);
-  console.log(`Order Status: '${order.status}' (Expected: 'pending')`);
-  const isPending = order.status === 'pending';
-  console.log(`Is Status 'pending': ${isPending}`);
-  
-  console.log(`User Logged In: ${!!user}`);
-  console.log(`Logged In User ID: ${user ? user.id : 'N/A'}`);
-  
-  console.log(`Product Found: ${!!product}`);
-  console.log(`Product Seller ID: ${product ? product.sellerId : 'N/A'}`);
-  
-  const isUserTheSeller = user && product && user.id === product.sellerId;
-  console.log(`Is Logged In User the Seller: ${isUserTheSeller}`);
-  
-  const shouldShowButton = isPending && user && product && isUserTheSeller;
-  console.log(`---> Should show button based on these values: ${shouldShowButton}`);
-  console.log('--- [DEBUG] End check ---');
+  // --- 获取订单关联的争议信息 --- 
+  let disputes = [];
+  try {
+      console.log(`[Order Detail] Fetching disputes for order ${orderId}`);
+      disputes = await blockchainService.query('dispute_resolution', 'orderId', orderId);
+      disputes = disputes || []; // 确保是数组
+      console.log(`[Order Detail] Found ${disputes.length} disputes for order ${orderId}`);
+  } catch (error) {
+      console.error(`[Order Detail] Failed to fetch disputes for order ${orderId}:`, error);
+      // 查询失败，传递空数组
+  }
   // ---------------------------
 
   res.render('orders/show', {
     title: `订单详情 #${orderId.substring(0, 8)} - VeriTrade Chain`,
     order,
-    product, // 传递给模板，即使可能为 null
+    product, 
     buyer,
     seller,
-    review,
-    user: req.session.user // 传递 user
+    // review, // 移除旧的 review
+    disputes: disputes, // <-- 传递争议列表给视图
+    user: req.session.user 
   });
 };
 

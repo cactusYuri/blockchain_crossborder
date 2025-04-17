@@ -83,6 +83,8 @@ const traceRoutes = require('./routes/trace');
 const blockchainRoutes = require('./routes/blockchain');
 const traceabilityApiRoutes = require('./routes/traceabilityRoutes'); // 引入新的 API 路由
 const reviewApiRoutes = require('./routes/reviewRoutes'); // <--- 引入评价 API 路由
+const disputeApiRoutes = require('./routes/disputeRoutes'); // <-- 引入争议 API 路由
+const disputePageRoutes = require('./routes/disputePageRoutes'); // <-- 引入争议页面路由
 
 // 使用路由
 app.use('/auth', authRoutes);
@@ -92,6 +94,8 @@ app.use('/trace', traceRoutes);
 app.use('/blockchain', blockchainRoutes);
 app.use('/api/traceability', traceabilityApiRoutes); // 挂载新的 API 路由到 /api/traceability
 app.use('/api/reviews', reviewApiRoutes); // <--- 挂载评价 API 路由到 /api/reviews
+app.use('/api/disputes', disputeApiRoutes); // <-- 挂载争议 API 路由
+app.use('/disputes', disputePageRoutes); // <-- 挂载争议页面路由 (注意路径不同)
 
 // 根路由
 app.get('/', (req, res) => {
