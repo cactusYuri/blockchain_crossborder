@@ -1,0 +1,15 @@
+<%- include('partials/header') %>
+
+<div class="alert alert-danger">
+  <h2><%= message %></h2>
+  <% if (process.env.NODE_ENV !== 'production') { %>
+    <h3><%= error.status %></h3>
+    <pre><%= error.stack %></pre>
+  <% } %>
+</div>
+
+<div class="text-center mt-4">
+  <a href="/" class="btn btn-primary">返回首页</a>
+</div>
+
+<%- include('partials/footer') %> 

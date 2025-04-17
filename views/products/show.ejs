@@ -1,0 +1,79 @@
+<%- include('../partials/header') %>
+
+<div class="row">
+  <div class="col-md-6">
+    <img src="<%= product.imageUrl %>" class="img-fluid rounded" alt="<%= product.name %>">
+    
+    <% if (product.qrCodeData) { %>
+      <div class="card mt-3">
+        <div class="card-header">
+          <h5 class="mb-0">商品溯源二维码</h5>
+        </div>
+        <div class="card-body text-center">
+          <div class="qr-container">
+            <img src="<%= product.qrCodeData %>" alt="Trace QR Code">
+          </div>
+          <p class="card-text">扫描二维码查看商品溯源信息</p>
+          <a href="/trace/<%= product.blockchainProductId %>" class="btn btn-outline-primary" target="_blank">直接查看溯源信息</a>
+        </div>
+      </div>
+    <% } %>
+  </div>
+  
+  <div class="col-md-6">
+    <h1><%= product.name %></h1>
+    <p class="text-primary fs-4 fw-bold">¥<%= product.price.toFixed(2) %></p>
+    
+    <div class="mb-3">
+      <h5>商品描述</h5>
+      <p><%= product.description %></p>
+    </div>
+    
+    <div class="mb-3">
+      <h5>卖家信息</h5>
+      <p><%= seller.name %> <% if (seller.publicKey) { %>(公钥: <%= seller.publicKey.substring(0, 30) %>...) <% } %></p>
+    </div>
+    
+    <div class="mb-3">
+      <h5>原产地</h5>
+      <p><%= product.origin || '未提供' %></p>
+    </div>
+    
+    <div class="mb-3">
+      <h5>上架时间</h5>
+      <p><%= new Date(product.createdAt).toLocaleString() %></p>
+    </div>
+    
+    <% if (user && user.role !== 'admin') { %>
+      <form action="/orders" method="POST" class="mt-4 border p-3 rounded bg-light">
+        <h5 class="mb-3">购买此商品</h5>
+        <input type="hidden" name="productId" value="<%= product.id %>">
+        
+        <div class="mb-3">
+          <label for="quantity" class="form-label">数量</label>
+          <input type="number" class="form-control" id="quantity" name="quantity" min="1" value="1" required>
+        </div>
+
+        <div class="mb-3">
+          <label for="password" class="form-label">您的密码 (用于签名)</label>
+          <input type="password" class="form-control" id="password" name="password" required>
+          <div id="passwordHelp" class="form-text text-danger">仅用于模拟环境以进行交易签名，请勿在生产环境中使用。</div>
+        </div>
+
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-success btn-lg">确认购买</button>
+        </div>
+      </form>
+    <% } else if (user && user.role === 'admin') { %>
+      <div class="alert alert-secondary mt-4">
+        管理员账户不能购买商品。
+      </div>
+    <% } else { %>
+      <div class="alert alert-info mt-4">
+        请<a href="/auth/login">登录</a>以购买商品。
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %> 

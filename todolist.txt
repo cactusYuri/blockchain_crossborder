@@ -1,0 +1,155 @@
+**Project Goal:** Develop a *highly simplified* Blockchain-based Cross-Border E-commerce platform ("VeriTrade Chain") focusing on Product Traceability and Seller Reputation using a monolithic architecture and **in-memory data storage** for non-blockchain data. **Data will be lost on application restart.**
+
+**Core Technologies:**
+
+* **Backend/Fullstack:** Node.js + Express.js
+* **Templating Engine:** EJS
+* **Database:** **None (Using In-Memory JavaScript Arrays/Objects)**
+* **Blockchain:** Hyperledger Fabric (using `fabric-samples/test-network` locally)
+* **Chaincode Language:** Node.js
+* **Fabric SDK:** `fabric-network`, `fabric-ca-client` (Node.js)
+* **Other Libraries:** `bcrypt` (password hashing), `express-session` (session management), `uuid` (unique IDs), `qrcode` (QR code generation), `crypto` (for hashing reviews), `html5-qrcode` (frontend QR scanning).
+
+---
+
+## **VeriTrade Chain - Development To-Do List for Claude (In-Memory Version)**
+
+**Phase 0: Environment Setup & Project Initialization**
+
+* [ ] **Task 0.1:** Ensure prerequisites are installed: Node.js (LTS version), Docker, Docker Compose, Git.
+* [ ] **Task 0.2:** Clone the Hyperledger Fabric Samples repository: `git clone https://github.com/hyperledger/fabric-samples.git`
+* [ ] **Task 0.3:** Navigate into `fabric-samples/test-network` and start the test network: `./network.sh up createChannel -ca` (Verify successful startup).
+* [ ] **Task 0.4:** Create a new project directory (e.g., `veritrade-chain-mem`).
+* [ ] **Task 0.5:** Initialize npm project: `npm init -y`.
+* [ ] **Task 0.6:** Install necessary npm dependencies:
+    ```bash
+    npm install express ejs bcrypt express-session uuid qrcode crypto fabric-network fabric-ca-client
+    npm install --save-dev nodemon # Optional, for development
+    ```
+* [ ] **Task 0.7:** Install frontend QR code scanning library: `npm install html5-qrcode`
+* [ ] **Task 0.8:** Set up project folder structure (similar to before, but no `models/` directory needed unless you create classes for the in-memory objects):
+    ```
+    /veritrade-chain-mem
+    ├── config/             # Fabric connection configs
+    ├── controllers/        # Request handling logic
+    ├── data/               # Module to manage in-memory stores (optional)
+    ├── public/             # Static assets (CSS, client-side JS)
+    │   └── js/
+    ├── routes/             # Express route definitions
+    ├── services/           # Business logic, Fabric client interaction
+    ├── views/              # EJS templates
+    │   ├── partials/
+    │   ├── auth/
+    │   ├── products/
+    │   ├── orders/
+    │   └── trace/
+    ├── chaincode/          # Chaincode source
+    │   ├── traceability/
+    │   └── reputation/
+    ├── scripts/            # Helper scripts (enroll admin, register user, deploy chaincode)
+    ├── .env                # Environment variables (optional for this version)
+    ├── app.js              # Main application entry point
+    └── package.json
+    ```
+* [ ] **Task 0.9:** Create an in-memory data store. In `app.js` (or a dedicated `data/store.js` module), initialize global arrays:
+    ```javascript
+    global.users = []; // Structure: { id, email, passwordHash, role }
+    global.products = []; // Structure: { id, sellerId, name, description, price, imageUrl, createdAt, blockchainProductId, qrCodeData }
+    global.orders = []; // Structure: { id, buyerId, productId, quantity, totalPrice, status, createdAt }
+    global.reviews = []; // Structure: { id, orderId, sellerId, buyerId, rating, commentText, commentHash, createdAt }
+    ```
+    *(Remember to handle ID generation, e.g., using `uuid.v4()`)*
+* [ ] **Task 0.10:** Create basic Express app setup in `app.js` (include middleware: `express.json()`, `express.urlencoded()`, session management, static files). Add basic "Hello World" route to test.
+
+**Phase 1: Basic Web Application Framework (In-Memory Data)**
+
+* [ ] **Task 1.1 (Auth):**
+    * Create auth routes (`routes/auth.js`): `GET /register`, `POST /register`, `GET /login`, `POST /login`, `GET /logout`.
+    * Create auth controller (`controllers/authController.js`): Implement registration (generate user ID, hash password with `bcrypt`, push to `global.users`), login (find user in `global.users`, compare hash, manage session), logout.
+    * Create auth views (`views/auth/register.ejs`, `views/auth/login.ejs`).
+    * Implement basic authentication middleware (`middleware/authMiddleware.js`) to protect routes based on session data.
+* [ ] **Task 1.2 (Product):**
+    * Create product routes (`routes/products.js`): `GET /products` (list all), `GET /products/new` (show form for sellers), `POST /products` (create new), `GET /products/:id` (view details).
+    * Create product controller (`controllers/productController.js`): Implement logic for listing (read from `global.products`), showing form (check user role), creating (generate product ID, add to `global.products`, *skip blockchain part for now*), viewing details (find in `global.products`).
+    * Create product views (`views/products/index.ejs`, `views/products/new.ejs`, `views/products/show.ejs`). Include basic navigation in partials (`views/partials/header.ejs`).
+* [ ] **Task 1.3 (Order):**
+    * Create order routes (`routes/orders.js`): `POST /orders` (create order), `GET /orders` (view user's orders), `GET /orders/:id` (view specific order), `POST /orders/:id/ship` (placeholder), `POST /orders/:id/review` (placeholder).
+    * Create order controller (`controllers/orderController.js`): Implement logic for creating orders (generate order ID, add to `global.orders`), listing user's orders (filter `global.orders`), viewing order details (find in `global.orders`). Implement placeholder functions for shipping and reviewing.
+    * Create order views (`views/orders/index.ejs`, `views/orders/show.ejs`).
+
+**Phase 2: Hyperledger Fabric Setup & Chaincode Development**
+
+* **[No Changes Needed]**
+    * [ ] **Task 2.1 (Fabric Client Setup):** (As before: connection profile, enrollAdmin, registerUser scripts)
+    * [ ] **Task 2.2 (Traceability Chaincode):** (As before: develop and package)
+    * [ ] **Task 2.3 (Reputation Chaincode):** (As before: develop and package)
+    * [ ] **Task 2.4 (Chaincode Deployment):** (As before: deployment scripts using peer lifecycle commands)
+
+**Phase 3: Blockchain Integration - Backend Logic (Using In-Memory Data)**
+
+* **[No Changes Needed in Task 3.1]**
+    * [ ] **Task 3.1 (Fabric Service):** (As before: create reusable module to connect and interact with Fabric)
+* **[Modifications for In-Memory Storage]**
+    * [ ] **Task 3.2 (Integrate Product Creation):**
+        * Modify `controllers/productController.js` -> `createProduct` function:
+            * Generate `productId` (UUID).
+            * Generate `blockchainProductId` (UUID).
+            * Add product data (including `blockchainProductId`) to `global.products` array.
+            * Call `fabricService.submitTransaction('traceability', 'RecordEvent', blockchainProductId, 'CREATED', JSON.stringify({name: product.name, origin: 'Default Origin'}), Date.now().toString())`.
+            * Generate `qrCodeData` (e.g., URL: `http://yourdomain.com/trace/${blockchainProductId}`).
+            * **Update the in-memory product object** in `global.products` with the generated `qrCodeData` (or generate QR URL dynamically when rendering).
+    * [ ] **Task 3.3 (Integrate Shipping Event):**
+        * Modify `controllers/orderController.js` -> `shipOrder` function (implement route `POST /orders/:id/ship`):
+            * Find the order in `global.orders` and update its status to 'shipped'.
+            * Find the associated product in `global.products` using `order.productId` to get the `blockchainProductId`.
+            * Call `fabricService.submitTransaction('traceability', 'RecordEvent', blockchainProductId, 'SHIPPED', JSON.stringify({trackingInfo: req.body.trackingNumber || 'N/A'}), Date.now().toString())`.
+    * **[No Changes Needed in Task 3.4]**
+        * [ ] **Task 3.4 (Implement Traceability Query):** (As before: route, controller, call evaluateTransaction, render view)
+    * **[Modifications for In-Memory Storage]**
+        * [ ] **Task 3.5 (Integrate Review Submission):**
+            * Modify `controllers/orderController.js` -> `addReview` function (implement route `POST /orders/:id/review`):
+                * Generate `reviewId` (UUID).
+                * Create a hash of the comment text: `crypto.createHash('sha256').update(comment_text).digest('hex')`.
+                * Add review data (including `reviewId`, `rating`, `comment_text`, `commentHash`, relevant IDs) to `global.reviews` array.
+                * Get relevant IDs (`orderId`, `sellerId`, `buyerId`) from the order found in `global.orders`.
+                * Call `fabricService.submitTransaction('reputation', 'AddReviewRecord', reviewId, orderId, sellerId, buyerId, rating.toString(), commentHash, Date.now().toString())`.
+                * Find the order in `global.orders` and update its status to 'reviewed'.
+    * **[Modifications for In-Memory Storage]**
+        * [ ] **Task 3.6 (Implement Reputation Query):**
+            * Create seller routes/controller if not done.
+            * Implement `getSellerProfile` function:
+                * Fetch seller details by filtering `global.users` array based on `sellerId`.
+                * Call `fabricService.evaluateTransaction('reputation', 'GetSellerReviews', sellerId)`.
+                * Calculate aggregate reputation score from the results.
+                * Render seller profile view passing seller data (from `global.users`) and reputation score.
+
+**Phase 4: Blockchain Integration - Frontend Display & Interaction**
+
+* **[No Significant Changes Needed]**
+    * [ ] **Task 4.1 (Display QR Code):** (As before: use product data, now fetched from in-memory store via controller, to display QR code image)
+    * [ ] **Task 4.2 (Display Trace History):** (As before: render view with history data fetched from blockchain via controller)
+    * [ ] **Task 4.3 (Display Reputation):** (As before: display score calculated in backend from blockchain data)
+    * [ ] **Task 4.4 (Implement QR Code Scanning):** (As before: use client-side library to scan and redirect)
+
+**Phase 5: Testing, Polishing & Deployment Prep**
+
+* [ ] **Task 5.1:** Thoroughly test all user flows. **Crucially, test what happens after restarting the Node.js application (all user/product/order/review data stored in memory will be lost, only blockchain data persists).**
+* [ ] **Task 5.2:** Check blockchain transactions (As before).
+* [ ] **Task 5.3:** Refine UI/UX (As before).
+* [ ] **Task 5.4:** Add error handling (As before).
+* [ ] **Task 5.5:** Write README.md. **Clearly state that this version uses in-memory storage and data is not persistent across restarts.**
+* [ ] **Task 5.6:** Prepare demo script. **Acknowledge the in-memory limitation during the demo if necessary, focusing on the blockchain aspect.**
+* [ ] **Task 5.7:** Clean up code, add comments (As before).
+
+---
+
+**Instructions for Claude:**
+
+1.  Follow these tasks sequentially.
+2.  **Implement non-blockchain data storage using simple global JavaScript arrays (`global.users`, `global.products`, etc.) as defined in Task 0.9.** No database interaction is required.
+3.  **Be fully aware that all data stored in these arrays will be lost when the Node.js application restarts.** This simplification is *only* for demo purposes.
+4.  Generate code using Node.js, Express, EJS. Use `uuid` for generating unique IDs for in-memory objects. Use `bcrypt` for password hashing.
+5.  Use the `fabric-network` and `fabric-ca-client` SDKs for Hyperledger Fabric interactions. Assume the `test-network` is running.
+6.  Write modular and commented code. Implement basic error handling.
+7.  Chaincode development and deployment tasks (Phase 2) remain unchanged.
+8.  Ask for clarification if needed.

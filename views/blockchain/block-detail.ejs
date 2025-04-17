@@ -1,0 +1,103 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1>区块 #<%= blockNumber %> 详情</h1>
+    <div>
+      <a href="/blockchain/blocks" class="btn btn-primary">返回区块列表</a>
+      <a href="/blockchain" class="btn btn-outline-primary">返回区块链概览</a>
+    </div>
+  </div>
+  
+  <div class="card mt-4">
+    <div class="card-header bg-primary text-white">
+      区块信息
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <tr>
+          <th style="width: 20%">区块高度:</th>
+          <td><%= blockNumber %></td>
+        </tr>
+        <tr>
+          <th>哈希:</th>
+          <td><code class="text-break"><%= block.hash %></code></td>
+        </tr>
+        <tr>
+          <th>前区块哈希:</th>
+          <td>
+            <% if (blockNumber > 0) { %>
+              <a href="/blockchain/blocks/<%= blockNumber - 1 %>">
+                <code class="text-break"><%= block.previousHash %></code>
+              </a>
+            <% } else { %>
+              <code class="text-break"><%= block.previousHash %></code>
+            <% } %>
+          </td>
+        </tr>
+        <tr>
+          <th>时间戳:</th>
+          <td><%= new Date(block.timestamp).toLocaleString() %></td>
+        </tr>
+        <tr>
+          <th>随机数 (Nonce):</th>
+          <td><%= block.nonce %></td>
+        </tr>
+        <tr>
+          <th>交易数量:</th>
+          <td><%= block.transactions.length %></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  
+  <div class="card mt-4">
+    <div class="card-header bg-success text-white">
+      区块内交易
+    </div>
+    <div class="card-body">
+      <% if (block.transactions.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table table-striped table-hover">
+            <thead>
+              <tr>
+                <th>交易ID</th>
+                <th>链码</th>
+                <th>函数</th>
+                <th>时间戳</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% block.transactions.forEach(tx => { %>
+                <tr>
+                  <td><code class="text-break" style="max-width: 150px; display: inline-block; overflow: hidden; text-overflow: ellipsis;"><%= tx.id %></code></td>
+                  <td><%= tx.chaincodeName %></td>
+                  <td><%= tx.functionName %></td>
+                  <td><%= new Date(tx.timestamp).toLocaleString() %></td>
+                  <td>
+                    <a href="/blockchain/transactions/<%= tx.id %>" class="btn btn-sm btn-info">查看交易</a>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="alert alert-info">
+          此区块没有交易，可能是创世区块。
+        </div>
+      <% } %>
+    </div>
+  </div>
+  
+  <% if (blockNumber < (block.chain?.length - 1) || false) { %>
+    <div class="mt-4 text-center">
+      <a href="/blockchain/blocks/<%= blockNumber + 1 %>" class="btn btn-primary">
+        下一个区块 <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,127 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1>交易详情</h1>
+    <div>
+      <a href="/blockchain/blocks" class="btn btn-primary">返回区块列表</a>
+      <a href="/blockchain" class="btn btn-outline-primary">返回区块链概览</a>
+    </div>
+  </div>
+  
+  <div class="card mt-4">
+    <div class="card-header bg-primary text-white">
+      交易信息
+    </div>
+    <div class="card-body">
+      <table class="table">
+        <tr>
+          <th style="width: 20%">交易ID:</th>
+          <td><code class="text-break"><%= transaction.id %></code></td>
+        </tr>
+        <tr>
+          <th>状态:</th>
+          <td>
+            <% if (transaction.pending) { %>
+              <span class="badge bg-warning">待处理</span>
+            <% } else { %>
+              <span class="badge bg-success">已确认</span>
+            <% } %>
+          </td>
+        </tr>
+        <tr>
+          <th>链码:</th>
+          <td><%= transaction.chaincodeName %></td>
+        </tr>
+        <tr>
+          <th>函数:</th>
+          <td><%= transaction.functionName %></td>
+        </tr>
+        <tr>
+          <th>发起者:</th>
+          <td><code class="text-break" style="font-size: 0.8rem;"><%= transaction.from.substring(0, 50) %>...</code></td>
+        </tr>
+        <tr>
+          <th>时间戳:</th>
+          <td><%= new Date(transaction.timestamp).toLocaleString() %></td>
+        </tr>
+        <tr>
+          <th>签名:</th>
+          <td>
+            <code class="text-break" style="font-size: 0.8rem;"><%= transaction.signature.substring(0, 64) %>...</code>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+  
+  <div class="card mt-4">
+    <div class="card-header bg-success text-white">
+      交易参数
+    </div>
+    <div class="card-body">
+      <% if (transaction.args && transaction.args.length > 0) { %>
+        <div class="table-responsive">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% transaction.args.forEach((arg, index) => { %>
+                <tr>
+                  <td><%= index %></td>
+                  <td>
+                    <% try { %>
+                      <% const parsedArg = JSON.parse(arg); %>
+                      <pre class="mb-0"><%= JSON.stringify(parsedArg, null, 2) %></pre>
+                    <% } catch(e) { %>
+                      <%= arg %>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="alert alert-info">
+          此交易没有参数。
+        </div>
+      <% } %>
+    </div>
+  </div>
+  
+  <% if (transaction.chaincodeName === 'traceability' && transaction.functionName === 'RecordEvent') { %>
+    <div class="card mt-4">
+      <div class="card-header bg-info text-white">
+        产品事件详情
+      </div>
+      <div class="card-body">
+        <% const productId = transaction.args[0]; %>
+        <% const eventType = transaction.args[1]; %>
+        <% try { %>
+          <% const eventData = JSON.parse(transaction.args[2]); %>
+          <div class="mb-3">
+            <h5>产品ID: <code><%= productId %></code></h5>
+            <h5>事件类型: <span class="badge bg-primary"><%= eventType %></span></h5>
+          </div>
+          <div class="card">
+            <div class="card-header">事件数据</div>
+            <div class="card-body">
+              <pre><%= JSON.stringify(eventData, null, 2) %></pre>
+            </div>
+          </div>
+        <% } catch(e) { %>
+          <div class="alert alert-warning">
+            无法解析事件数据: <%= e.message %>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<%- include('../partials/footer') %> 

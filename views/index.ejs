@@ -1,0 +1,48 @@
+<%- include('partials/header') %>
+
+<div class="jumbotron bg-light p-5 rounded-3">
+  <h1 class="display-4">VeriTrade Chain</h1>
+  <p class="lead">基于区块链的跨境电商平台，通过区块链技术实现商品溯源和卖家信誉保障</p>
+  <hr class="my-4">
+  <p>本平台利用区块链技术，提供商品溯源和卖家信誉评价的透明度和不可篡改性</p>
+  <div class="mt-4">
+    <% if (!user) { %>
+      <a href="/auth/register" class="btn btn-primary btn-lg me-2">注册账户</a>
+      <a href="/auth/login" class="btn btn-secondary btn-lg">登录</a>
+    <% } else { %>
+      <a href="/products" class="btn btn-primary btn-lg">浏览商品</a>
+      <% if (user.role === 'seller') { %>
+        <a href="/products/new" class="btn btn-success btn-lg ms-2">发布商品</a>
+      <% } %>
+    <% } %>
+  </div>
+</div>
+
+<div class="row mt-5">
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">商品溯源</h5>
+        <p class="card-text">每个商品都有唯一的区块链身份，扫码即可查看完整的商品生命周期记录</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">真实评价</h5>
+        <p class="card-text">基于区块链的评价系统，确保每个评价都是真实交易后产生的，不可篡改</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">卖家信誉</h5>
+        <p class="card-text">卖家信誉分数基于区块链记录的真实交易评价，用户可放心购买</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('partials/footer') %> 

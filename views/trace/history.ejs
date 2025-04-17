@@ -1,0 +1,95 @@
+<%- include('../partials/header') %>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <h2 class="mb-0">商品溯源信息</h2>
+  </div>
+  <div class="card-body">
+    <% if (error) { %>
+      <div class="alert alert-danger">
+        <%= error %>
+      </div>
+    <% } %>
+    
+    <% if (product) { %>
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <img src="<%= product.imageUrl %>" class="img-fluid rounded" alt="<%= product.name %>">
+        </div>
+        <div class="col-md-9">
+          <h3><%= product.name %></h3>
+          <p><%= product.description %></p>
+          <p><strong>原产地:</strong> <%= product.origin || '未提供' %></p>
+          <p><strong>区块链ID:</strong> <code><%= blockchainProductId %></code></p>
+          <a href="/products/<%= product.id %>" class="btn btn-outline-primary">查看商品详情</a>
+        </div>
+      </div>
+    <% } else { %>
+      <div class="alert alert-warning">
+        无法找到此区块链ID对应的商品信息。该商品可能不存在或已下架。
+      </div>
+    <% } %>
+    
+    <h4>溯源历史记录</h4>
+    
+    <% if (history.length === 0) { %>
+      <div class="alert alert-info">
+        暂无溯源历史记录，或无法从区块链获取数据。
+      </div>
+    <% } else { %>
+      <div class="timeline">
+        <% history.forEach(event => { %>
+          <div class="timeline-item" data-date="<%= new Date(parseInt(event.timestamp)).toLocaleString().substring(0, 10) %>">
+            <div class="d-flex align-items-center mb-2">
+              <h5 class="mb-0 me-3">
+                <% if (event.eventType === 'CREATED') { %>
+                  <span class="badge bg-success">创建</span>
+                <% } else if (event.eventType === 'SHIPPED') { %>
+                  <span class="badge bg-primary">发货</span>
+                <% } else { %>
+                  <span class="badge bg-secondary"><%= event.eventType %></span>
+                <% } %>
+              </h5>
+              <small class="text-muted"><%= new Date(parseInt(event.timestamp)).toLocaleString() %></small>
+            </div>
+            
+            <% try { %>
+              <% const eventData = JSON.parse(event.eventData); %>
+              <% if (event.eventType === 'CREATED') { %>
+                <p>商品「<strong><%= eventData.name %></strong>」已在平台登记。</p>
+                <% if (eventData.origin) { %>
+                  <p>原产地: <strong><%= eventData.origin %></strong></p>
+                <% } %>
+              <% } else if (event.eventType === 'SHIPPED') { %>
+                <p>商品已发货。</p>
+                <% if (eventData.trackingInfo && eventData.trackingInfo !== 'N/A') { %>
+                  <p>物流单号: <strong><%= eventData.trackingInfo %></strong></p>
+                <% } %>
+                <% if (eventData.orderId) { %>
+                  <p>订单编号: <strong><%= eventData.orderId.substring(0, 8) %></strong></p>
+                <% } %>
+              <% } else { %>
+                <pre><%= JSON.stringify(eventData, null, 2) %></pre>
+              <% } %>
+            <% } catch (e) { %>
+              <p>事件数据: <%= event.eventData %></p>
+            <% } %>
+            
+            <div class="alert alert-light">
+              <small>此事件已记录在区块链上，交易ID: <code><%= event.txId.substring(0, 16) %>...</code></small>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+  
+  <div class="card-footer">
+    <div class="alert alert-info">
+      <h5>什么是区块链溯源?</h5>
+      <p>区块链技术确保所有记录的溯源信息不可篡改，提供商品从源头到销售的透明记录。购买前，您可以验证商品的整个生命周期历史。</p>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %> 

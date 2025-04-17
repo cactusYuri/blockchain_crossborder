@@ -1,0 +1,75 @@
+<%- include('../partials/header') %>
+
+<div class="container mt-4">
+    <h1><%= title %></h1>
+    <hr>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            基本信息
+        </div>
+        <div class="card-body">
+            <p><strong>用户名:</strong> <%= profile.name %></p>
+            <p><strong>邮箱:</strong> <%= profile.email %></p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            账户钱包 (模拟)
+        </div>
+        <div class="card-body">
+            <p class="fs-4"><strong>虚拟币余额:</strong> <span class="badge bg-success"><%= profile.balance.toLocaleString() %></span></p>
+            <p class="text-muted small">这是您在本平台模拟交易的虚拟货币余额。</p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            安全密钥 (钱包核心)
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <h5>公钥 (Public Key)</h5>
+                <p class="text-muted small">您的公开身份标识符，可安全分享，用于验证您的交易签名。</p>
+                <div class="input-group">
+                    <textarea class="form-control" rows="5" readonly><%= profile.publicKey %></textarea>
+                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(this.previousElementSibling)">复制</button>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="mb-3">
+                <h5>加密私钥 (Encrypted Private Key)</h5>
+                <p class="text-danger small fw-bold"><strong>警告:</strong> 这是您的加密私钥。请妥善保管，切勿泄露！它已使用您的登录密码加密。只有结合您的密码才能解密以签署交易。</p>
+                 <div class="input-group">
+                    <textarea class="form-control" rows="8" readonly><%= profile.encryptedPrivateKey %></textarea>
+                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard(this.previousElementSibling)">复制</button>
+                </div>
+                <p class="text-muted small mt-2">在进行发布商品、购买等操作时，系统会要求您输入密码以临时解密此密钥进行签名。您的明文私钥不会被存储。</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// 简单的复制到剪贴板功能
+function copyToClipboard(element) {
+    element.select();
+    element.setSelectionRange(0, 99999); // For mobile devices
+    try {
+        document.execCommand('copy');
+        alert('已复制到剪贴板！');
+    } catch (err) {
+        alert('复制失败，请手动复制。');
+        console.error('Copy failed:', err);
+    }
+    // Deselect text
+    window.getSelection().removeAllRanges(); 
+}
+</script>
+
+
+<%- include('../partials/footer') %> 

@@ -1,0 +1,74 @@
+<%- include('../partials/header') %>
+
+<h1>我的订单</h1>
+
+<% if (!orders || orders.length === 0) { %>
+  <div class="alert alert-info">
+    您还没有订单，<a href="/products">去购物</a>
+  </div>
+<% } else { %>
+  <div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+      <thead class="table-dark">
+        <tr>
+          <th>订单编号</th>
+          <th>商品</th>
+          <th>买家</th>
+          <th>卖家</th>
+          <th>数量</th>
+          <th>总价</th>
+          <th>状态</th>
+          <th>创建时间</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% orders.forEach(order => { %>
+          <tr>
+            <td>
+              <a href="/orders/<%= order.id %>" title="查看订单详情">
+                <%= order.id.substring(0, 8) %>...
+              </a>
+            </td>
+            <td>
+              <% if (order.product && order.product.id) { %>
+                <div class="d-flex align-items-center">
+                  <a href="/products/<%= order.product.id %>" title="查看商品详情">
+                    <img src="<%= order.product.imageUrl || 'https://via.placeholder.com/50' %>" alt="<%= order.product.name %>" style="width: 40px; height: 40px; object-fit: cover; margin-right: 10px; border-radius: 4px;">
+                  </a>
+                  <a href="/products/<%= order.product.id %>" class="text-decoration-none text-dark"><%= order.product.name %></a>
+                </div>
+              <% } else { %>
+                <span class="text-muted">商品信息丢失</span>
+              <% } %>
+            </td>
+            <td><%= order.buyer ? order.buyer.name : '未知' %></td>
+            <td><%= order.seller ? order.seller.name : '未知' %></td>
+            <td><%= order.quantity %></td>
+            <td>¥<%= order.totalPrice.toFixed(2) %></td>
+            <td>
+                <% 
+                let statusBadgeClass = 'bg-secondary';
+                let statusText = order.status || '未知';
+                switch (order.status) {
+                    case 'PENDING': statusBadgeClass = 'bg-warning text-dark'; statusText = '待发货'; break;
+                    case 'SHIPPED': statusBadgeClass = 'bg-primary'; statusText = '已发货'; break;
+                    case 'DELIVERED': statusBadgeClass = 'bg-info'; statusText = '已送达'; break;
+                    case 'REVIEWED': statusBadgeClass = 'bg-success'; statusText = '已评价'; break;
+                    case 'CANCELLED': statusBadgeClass = 'bg-danger'; statusText = '已取消'; break;
+                }
+                %>
+                <span class="badge <%= statusBadgeClass %>"><%= statusText %></span>
+            </td>
+            <td><%= new Date(order.createdAt).toLocaleString() %></td>
+            <td>
+              <a href="/orders/<%= order.id %>" class="btn btn-sm btn-outline-primary">查看详情</a>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<%- include('../partials/footer') %> 

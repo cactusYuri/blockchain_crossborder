@@ -1,0 +1,127 @@
+<%- include('../partials/header') %>
+
+<div class="card mb-4">
+  <div class="card-header">
+    <div class="d-flex justify-content-between align-items-center">
+      <h2 class="mb-0">订单详情</h2>
+      <span class="badge 
+        <% if (order.status === 'pending') { %>bg-warning<% } %>
+        <% if (order.status === 'shipped') { %>bg-primary<% } %>
+        <% if (order.status === 'delivered') { %>bg-info<% } %>
+        <% if (order.status === 'reviewed') { %>bg-success<% } %>
+        fs-6">
+        <% if (order.status === 'pending') { %>待发货<% } %>
+        <% if (order.status === 'shipped') { %>已发货<% } %>
+        <% if (order.status === 'delivered') { %>已送达<% } %>
+        <% if (order.status === 'reviewed') { %>已评价<% } %>
+      </span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-4">
+        <h5>订单信息</h5>
+        <p><strong>订单编号:</strong> <%= order.id.substring(0, 8) %></p>
+        <p><strong>创建时间:</strong> <%= order.createdAt.toLocaleString() %></p>
+        <p><strong>总价:</strong> ¥<%= order.totalPrice.toFixed(2) %></p>
+        <p><strong>数量:</strong> <%= order.quantity %></p>
+        
+        <% if (order.status === 'shipped' || order.status === 'delivered' || order.status === 'reviewed') { %>
+          <p><strong>发货时间:</strong> <%= order.shippedAt.toLocaleString() %></p>
+          <p><strong>物流单号:</strong> <%= order.trackingNumber %></p>
+        <% } %>
+        
+        <% if (order.status === 'reviewed') { %>
+          <p><strong>评价时间:</strong> <%= order.reviewedAt.toLocaleString() %></p>
+        <% } %>
+      </div>
+      
+      <div class="col-md-4">
+        <h5>商品信息</h5>
+        <div class="d-flex align-items-center mb-3">
+          <img src="<%= product.imageUrl %>" alt="<%= product.name %>" style="width: 80px; height: 80px; object-fit: cover; margin-right: 10px;">
+          <div>
+            <h6><%= product.name %></h6>
+            <p class="text-primary">¥<%= product.price.toFixed(2) %> × <%= order.quantity %></p>
+          </div>
+        </div>
+        <p><strong>描述:</strong> <%= product.description %></p>
+        <p><a href="/products/<%= product.id %>" class="btn btn-sm btn-outline-primary">查看商品详情</a></p>
+      </div>
+      
+      <div class="col-md-4">
+        <h5>用户信息</h5>
+        <p><strong>买家:</strong> <%= buyer.name %></p>
+        <p><strong>卖家:</strong> <%= seller.name %></p>
+      </div>
+    </div>
+    
+    <% if (order.status === 'pending' && user.role === 'seller' && user.id === product.sellerId) { %>
+      <hr>
+      <h5>卖家操作</h5>
+      <form action="/orders/<%= order.id %>/ship" method="POST" class="mb-3">
+        <div class="mb-3">
+          <label for="trackingNumber" class="form-label">物流单号</label>
+          <input type="text" class="form-control" id="trackingNumber" name="trackingNumber" placeholder="输入物流单号（可选）">
+        </div>
+        <button type="submit" class="btn btn-primary">确认发货</button>
+      </form>
+    <% } %>
+    
+    <% if (order.status === 'shipped' && user.role === 'buyer' && user.id === order.buyerId && !review) { %>
+      <hr>
+      <h5>买家评价</h5>
+      <form action="/orders/<%= order.id %>/review" method="POST">
+        <div class="mb-3">
+          <label for="rating" class="form-label">评分（1-5星）</label>
+          <select class="form-select" id="rating" name="rating" required>
+            <option value="5">5星 - 非常满意</option>
+            <option value="4">4星 - 满意</option>
+            <option value="3">3星 - 一般</option>
+            <option value="2">2星 - 不满意</option>
+            <option value="1">1星 - 非常不满意</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="comment" class="form-label">评价内容</label>
+          <textarea class="form-control" id="comment" name="comment" rows="3" required></textarea>
+        </div>
+        <div class="alert alert-info">
+          <small>提示：评价提交后将记录在区块链上，不可篡改</small>
+        </div>
+        <button type="submit" class="btn btn-primary">提交评价</button>
+      </form>
+    <% } %>
+    
+    <% if (review) { %>
+      <hr>
+      <h5>买家评价</h5>
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+              <% for (let i = 0; i < 5; i++) { %>
+                <% if (i < review.rating) { %>
+                  <span class="text-warning">★</span>
+                <% } else { %>
+                  <span class="text-secondary">☆</span>
+                <% } %>
+              <% } %>
+              <span class="ms-2"><%= review.rating %>/5</span>
+            </div>
+            <small class="text-muted"><%= review.createdAt.toLocaleString() %></small>
+          </div>
+          <p><%= review.comment %></p>
+          <div class="alert alert-info">
+            <small>评价已记录在区块链上，评论哈希: <%= review.commentHash.substring(0, 16) %>...</small>
+          </div>
+        </div>
+      </div>
+    <% } %>
+  </div>
+  <div class="card-footer">
+    <a href="/orders" class="btn btn-outline-secondary">返回订单列表</a>
+  </div>
+</div>
+
+<%- include('../partials/footer') %> 

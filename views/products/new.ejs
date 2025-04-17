@@ -1,0 +1,62 @@
+<%- include('../partials/header') %>
+
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="text-center">发布新商品</h3>
+      </div>
+      <div class="card-body">
+        <% if (error) { %>
+          <div class="alert alert-danger" role="alert">
+            <%= error %>
+          </div>
+        <% } %>
+        
+        <form action="/products" method="POST">
+          <div class="mb-3">
+            <label for="name" class="form-label">商品名称</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+          </div>
+          
+          <div class="mb-3">
+            <label for="description" class="form-label">商品描述</label>
+            <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+          </div>
+          
+          <div class="mb-3">
+            <label for="price" class="form-label">价格</label>
+            <div class="input-group">
+              <span class="input-group-text">¥</span>
+              <input type="number" class="form-control" id="price" name="price" step="0.01" min="0.01" required>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="imageUrl" class="form-label">商品图片URL</label>
+            <input type="url" class="form-control" id="imageUrl" name="imageUrl" placeholder="https://example.com/image.jpg">
+            <div class="form-text">留空将使用默认图片</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="origin" class="form-label">原产地</label>
+            <input type="text" class="form-control" id="origin" name="origin" placeholder="例如: 中国广东">
+          </div>
+          
+          <div class="mb-3 mt-4 p-3 border border-warning rounded">
+            <label for="password" class="form-label fw-bold">您的密码 (用于签名)</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+            <div id="passwordHelp" class="form-text text-danger">发布商品需要在区块链上记录，请输入您的登录密码以授权交易签名。此操作仅用于模拟环境。</div>
+          </div>
+          
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">发布商品</button>
+            <a href="/products" class="btn btn-outline-secondary">取消</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %> 
