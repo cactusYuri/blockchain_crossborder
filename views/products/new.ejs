@@ -13,7 +13,7 @@
           </div>
         <% } %>
         
-        <form action="/products" method="POST">
+        <form action="/products" method="POST" enctype="multipart/form-data">
           <div class="mb-3">
             <label for="name" class="form-label">商品名称</label>
             <input type="text" class="form-control" id="name" name="name" required>
@@ -35,7 +35,13 @@
           <div class="mb-3">
             <label for="imageUrl" class="form-label">商品图片URL</label>
             <input type="url" class="form-control" id="imageUrl" name="imageUrl" placeholder="https://example.com/image.jpg">
-            <div class="form-text">留空将使用默认图片</div>
+            <div class="form-text">输入图片网址，或者通过下方按钮上传图片文件。</div>
+          </div>
+          
+          <div class="mb-3">
+            <label for="imageFile" class="form-label">上传商品图片 (可选)</label>
+            <input class="form-control" type="file" id="imageFile" name="imageFile" accept="image/*">
+            <div class="form-text">如果上传了文件，将优先使用上传的图片。</div>
           </div>
           
           <div class="mb-3">

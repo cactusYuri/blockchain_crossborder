@@ -1,0 +1,304 @@
+/* Custom Styles for VeriTrade Chain */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;700&display=swap');
+
+:root {
+    --primary-glow: rgba(79, 172, 254, 0.5);
+    --text-primary: #e0e0e0;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --bg-dark-1: #141e30;
+    --bg-dark-2: #243b55;
+    --bg-dark-transparent: rgba(20, 30, 48, 0.8);
+    --bg-dark-element: rgba(36, 59, 85, 0.9);
+    --border-color: rgba(255, 255, 255, 0.1);
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    background: linear-gradient(to bottom right, var(--bg-dark-1), var(--bg-dark-2)); 
+    color: var(--text-primary); 
+    min-height: 100vh; 
+    display: flex;
+    flex-direction: column;
+}
+
+/* 包裹主要内容，使其不占满全屏高度，让 footer 能贴底 */
+.main-container {
+    flex: 1;
+}
+
+/* 导航栏样式 */
+.navbar {
+    background: var(--bg-dark-transparent); 
+    backdrop-filter: blur(8px); 
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    position: sticky; /* 固定导航栏 */
+    top: 0;
+    z-index: 1030; /* 确保在其他内容之上 */
+}
+
+.navbar-brand {
+    font-weight: 700;
+    color: #4facfe !important; 
+    letter-spacing: 1px;
+    text-shadow: 0 0 8px var(--primary-glow); 
+}
+
+.navbar .nav-link {
+    color: var(--text-secondary) !important; 
+    transition: color 0.3s ease, text-shadow 0.3s ease;
+    font-weight: 400;
+    padding: 0.5rem 1rem;
+}
+
+.navbar .nav-link:hover,
+.navbar .nav-link.active {
+    color: #ffffff !important; 
+    text-shadow: 0 0 5px rgba(255, 255, 255, 0.6);
+}
+
+/* 用户下拉菜单 */
+.navbar .dropdown-toggle::after {
+    color: var(--text-secondary);
+}
+
+.dropdown-menu {
+    background-color: var(--bg-dark-element); 
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    border-radius: 0.5rem;
+}
+
+.dropdown-item {
+    color: var(--text-secondary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    padding: 0.5rem 1rem;
+}
+
+.dropdown-item i {
+    margin-right: 0.75rem; /* 图标和文字间距 */
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+    background-color: rgba(79, 172, 254, 0.15);
+    color: #ffffff;
+}
+
+.dropdown-divider {
+    border-top: 1px solid var(--border-color);
+    margin: 0.5rem 0;
+}
+
+/* 页脚 */
+.footer {
+    background-color: transparent !important; /* 确保背景透明 */
+    padding: 1rem 0;
+}
+
+/* 通用样式 */
+h1, h2, h3, h4, h5, h6 {
+    color: #ffffff; /* 标题使用更亮的白色 */
+    font-weight: 500;
+}
+
+a {
+    color: #6bb8ff; /* 链接颜色 */
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+a:hover {
+    color: #a7d7ff;
+}
+
+/* 卡片样式 */
+.card {
+    background-color: rgba(36, 59, 85, 0.7); /* 深蓝半透明背景 */
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem; /* 更圆的边角 */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden; /* 确保图片圆角生效 */
+}
+
+.card:hover {
+    transform: translateY(-5px); /* 悬浮时轻微上移 */
+    box-shadow: 0 8px 25px rgba(79, 172, 254, 0.2); /* 悬浮时添加蓝色辉光 */
+}
+
+.card-header,
+.card-footer {
+    background-color: rgba(20, 30, 48, 0.5); /* 头部和脚部更深的背景 */
+    border-bottom: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
+}
+
+.card-title {
+    color: #ffffff;
+    font-weight: 500;
+}
+
+.card-text {
+    color: var(--text-secondary);
+}
+
+.card img.card-img-top,
+.product-detail-image {
+    border-bottom: 1px solid var(--border-color); /* 图片下方加边框 */
+}
+
+/* 按钮样式 */
+.btn {
+    border-radius: 50px; /* 药丸形状 */
+    padding: 0.6rem 1.5rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    letter-spacing: 0.5px;
+}
+
+.btn-primary {
+    background: linear-gradient(to right, #4facfe, #00f2fe); /* 蓝色渐变 */
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(79, 172, 254, 0.4);
+}
+
+.btn-primary:hover {
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(79, 172, 254, 0.6);
+}
+
+.btn-secondary,
+.btn-outline-secondary {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover,
+.btn-outline-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+.btn-success {
+    background: linear-gradient(to right, #28a745, #218838);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(40, 167, 69, 0.4);
+}
+
+.btn-success:hover {
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(40, 167, 69, 0.6);
+}
+
+.btn-info {
+    background: linear-gradient(to right, #17a2b8, #138496);
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(23, 162, 184, 0.4);
+}
+
+.btn-info:hover {
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(23, 162, 184, 0.6);
+}
+
+
+/* 表单样式 */
+.form-control {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border-color: #4facfe;
+    box-shadow: 0 0 0 0.2rem rgba(79, 172, 254, 0.25);
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.form-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.form-text {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* 输入框组 */
+.input-group-text {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    border-radius: 0.5rem 0 0 0.5rem;
+}
+
+/* 警告框 */
+.alert {
+    border-radius: 0.75rem;
+    border: none;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.2);
+    color: #f8d7da;
+}
+
+.alert-info {
+    background-color: rgba(23, 162, 184, 0.2);
+    color: #cff4fc;
+}
+
+.alert-secondary {
+     background-color: rgba(108, 117, 125, 0.2);
+     color: #e2e3e5;
+}
+
+/* Jumbotron/Hero 区域样式 (首页) */
+.jumbotron {
+    background-color: rgba(36, 59, 85, 0.5) !important; /* 使用半透明深色背景，覆盖 bg-light */
+    border: 1px solid var(--border-color);
+    border-radius: 1rem; /* 统一圆角风格 */
+    padding: 3rem 2rem !important; /* 调整内边距 */
+    margin-top: 2rem; /* 增加顶部间距 */
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.jumbotron h1.display-4 {
+    color: #ffffff; /* 确保主标题是白色 */
+    font-weight: 700; /* 加粗 */
+    text-shadow: 0 0 10px rgba(79, 172, 254, 0.4); /* 轻微辉光 */
+}
+
+.jumbotron p,
+.jumbotron p.lead {
+    color: var(--text-secondary); /* 使用定义的次要文字颜色 */
+    font-size: 1.1rem;
+}
+
+.jumbotron hr {
+    border-top: 1px solid var(--border-color); /* 分隔线颜色 */
+}
+
+/* 首页下方特性卡片区域 */
+.row.mt-5 .card {
+    background-color: rgba(36, 59, 85, 0.5); /* 背景可以稍微浅一点点 */
+} 

@@ -6,6 +6,41 @@ const blockchainService = require('../services/blockchainService'); // 使用更
 const { saveData } = require('../utils/dataPersistence'); // 引入 saveData
 // const crypto = require('crypto'); // No longer needed for direct signing here
 
+// 引入 multer 和 path
+const multer = require('multer');
+const path = require('path');
+
+// 确保 public/uploads/products 目录存在
+const fs = require('fs');
+const uploadDir = 'public/uploads/products/';
+if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// 配置 multer 存储
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir); 
+  },
+  filename: function (req, file, cb) {
+    // 使用 时间戳-原始文件名 的格式，避免重名
+    cb(null, Date.now() + '-' + path.extname(file.originalname)); // 仅保留扩展名，文件名用时间戳
+  }
+});
+
+// 文件过滤器，只接受图片
+const imageFilter = (req, file, cb) => {
+    if (file.mimetype.startsWith('image')) {
+        cb(null, true);
+    } else {
+        cb(new Error('只允许上传图片文件!'), false);
+    }
+};
+
+// 创建 multer 实例，限制只上传一个名为 'imageFile' 的文件，并添加文件过滤
+// 将 upload 导出或放在路由配置中
+// const upload = multer({ storage: storage, fileFilter: imageFilter }).single('imageFile');
+
 // Assuming the Product model is loaded globally or via a different mechanism
 // as the original code used global.products. Let's remove any require('../data')
 
@@ -30,8 +65,25 @@ exports.getNewProductForm = (req, res) => {
 // 创建新产品 (重写签名逻辑)
 exports.createProduct = async (req, res) => {
   try {
-    // 从请求体获取产品信息和 *密码* (!!! 仅用于模拟 !!!)
-    const { name, description, price, imageUrl, origin, password } = req.body;
+    // 注意：文件上传后，文本字段在 req.body，文件信息在 req.file
+    // const { name, description, price, imageUrl, origin, password } = req.body; // imageUrl 仍然可能从表单URL字段传来
+    // 由于 multer 中间件会在路由层使用，这里直接从 req.body 和 req.file 取值
+    const { name, description, price, imageUrl: bodyImageUrl, origin, password } = req.body; 
+
+    let finalImageUrl = 'https://via.placeholder.com/300'; // 默认图片
+
+    if (req.file) {
+      // 如果有文件上传，使用文件的相对路径 (相对于 web 根目录，即 public)
+      // 例如 'uploads/products/1678886400000.jpg'
+      finalImageUrl = path.join('uploads/products', req.file.filename).replace(/\\/g, '/'); 
+      console.log(`Uploaded image file detected: /${finalImageUrl}`); // 前面加 / 表示根路径
+    } else if (bodyImageUrl) {
+      // 如果没有文件上传，但提供了 URL，则使用 URL
+      finalImageUrl = bodyImageUrl;
+      console.log(`Using provided image URL: ${finalImageUrl}`);
+    } else {
+       console.log(`No image uploaded or URL provided, using default image.`);
+    }
 
     // 检查登录状态
     if (!req.session.user || !req.session.user.id) {
@@ -51,7 +103,7 @@ exports.createProduct = async (req, res) => {
             user: req.session.user,
             error: '需要提供密码才能发布商品 (用于交易签名)',
             // Pass back form data if needed
-            name, description, price, imageUrl, origin
+            name, description, price, imageUrl: bodyImageUrl, origin // 使用 bodyImageUrl 回填
         });
     }
 
@@ -61,7 +113,7 @@ exports.createProduct = async (req, res) => {
             title: '发布新商品 - VeriTrade Chain',
             user: req.session.user,
             error: '商品名称和价格不能为空',
-             name, description, price, imageUrl, origin
+             name, description, price, imageUrl: bodyImageUrl, origin // 使用 bodyImageUrl 回填
         });
      }
 
@@ -81,7 +133,7 @@ exports.createProduct = async (req, res) => {
       name,
       description,
       price: parseFloat(price),
-      imageUrl: imageUrl || 'https://via.placeholder.com/300',
+      imageUrl: finalImageUrl, // <- 使用处理后的图片 URL 或路径
       createdAt: new Date(), // 本地创建时间
       blockchainProductId, // 用于溯源的链上ID
       origin: origin || '未知产地',
@@ -160,7 +212,7 @@ exports.createProduct = async (req, res) => {
         title: '发布新商品 - VeriTrade Chain',
         user: req.session.user,
         error: errorMessage,
-        name, description, price, imageUrl, origin // 回填表单数据
+        name, description, price, imageUrl: bodyImageUrl, origin // 回填表单数据
       });
     }
     // ----------------------------
@@ -171,7 +223,8 @@ exports.createProduct = async (req, res) => {
     res.status(500).render('products/new', {
       title: '发布新商品 - VeriTrade Chain',
       user: req.session.user,
-      error: `创建产品时发生内部错误: ${error.message || '请重试'}`
+      error: `创建产品时发生内部错误: ${error.message || '请重试'}`, 
+      name, description, price, imageUrl: bodyImageUrl, origin // 回填表单数据
     });
   }
 };

@@ -126,7 +126,7 @@
 
     <%# --- 通用操作区域 (买卖双方或管理员可见) --- %>
     <hr>
-    <div id="dispute-section" data-disputes="<%- JSON.stringify(disputes || []).replace(/'/g, '\\'').replace(/"/g, '\'') %>"> <%# 将数据存储在 data 属性中，转义引号 %>
+    <div id="dispute-section" data-disputes="<%- JSON.stringify(disputes || []).replace(/"/g, '&quot;') %>"> <%# 将数据存储在 data 属性中，转义双引号 %>
         <h5>交易争议</h5>
         <div id="disputes-list" class="mb-3">
              <%# 争议列表将由 JS 填充 %>

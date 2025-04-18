@@ -1,0 +1,28 @@
+{
+  "39948cb5-5862-45e9-8e14-48e05fe9309d": [
+    {
+      "txId": "tx_1744960320323_ce98a44c",
+      "eventType": "PRODUCT_CREATED",
+      "eventData": {
+        "name": "刻晴1:1硅胶手办",
+        "origin": "璃月"
+      },
+      "timestamp": 1744960320323,
+      "actorPublicKey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsxpgsMJsjT9vjWyFngrr\nH+ZZPLq/Lr+pFe8kd/l1sJvbXYwYq76vquzmrpeyTk98bM/FenSP19qvc7yne9AP\nDKga3qFsY70LSKiRp6rzKXqxjz0U2sp8SyWbnHZX6WwsiSOgGgZLHxVpc6vF8rDt\n3YW/z9Vwn1Mba9KpqUkClT8WOFN6cdgm/SjM/fC7pGDFvgsPnnZW/njdgMdrBBro\nsd1U8azw7BBoLeTLM+DuSayfV+hTiGHdQkFCr6QQud/7EH+KVerv5RFn/NkAeGyp\n4u6z0iTjiNXDeHytli6gxtQjMhSbN3Fkp3bloHZVY7ERMC8fPk5XOznkXGQMvPQh\n5QIDAQAB\n-----END PUBLIC KEY-----\n",
+      "signature": "I7axiWYmGyuqmKqB1nRoCgReJERyfNCGKT5aY1wQcoLDfx+JXVKeHMTMX4Rmq3YbWy0RvH6nKstRm9UkKUTybvvzuBz48WdcIRqB8m6ey+O9ZHE3XWoGweM4dW8sUpSgS/3AeTyv0VdVa0iDFiOs0cmdRt/vd4TCBiZL4Hrz80UYN4CetXCcG+8QzY3BNwIT57uGIsF0MA511y59HGOPoLKfS8eJEFtB3RlDePTwm268TRXWVIpVAuzHh/M/UW5KiqTtJknPbFHtKyTPM0E8Z0hh1snYU0swnDEFhbGnSqwuTMIgVxULSBe+FaVMUSyc9P8a6KTu/rT+TJnx6aIVrQ=="
+    }
+  ],
+  "ed411154-a2d2-45f3-98d5-cfc5be0568ad": [
+    {
+      "txId": "tx_1744960490020_26ba78b7",
+      "eventType": "PRODUCT_CREATED",
+      "eventData": {
+        "name": "安柏手办（确信）",
+        "origin": "璃月"
+      },
+      "timestamp": 1744960490020,
+      "actorPublicKey": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAsxpgsMJsjT9vjWyFngrr\nH+ZZPLq/Lr+pFe8kd/l1sJvbXYwYq76vquzmrpeyTk98bM/FenSP19qvc7yne9AP\nDKga3qFsY70LSKiRp6rzKXqxjz0U2sp8SyWbnHZX6WwsiSOgGgZLHxVpc6vF8rDt\n3YW/z9Vwn1Mba9KpqUkClT8WOFN6cdgm/SjM/fC7pGDFvgsPnnZW/njdgMdrBBro\nsd1U8azw7BBoLeTLM+DuSayfV+hTiGHdQkFCr6QQud/7EH+KVerv5RFn/NkAeGyp\n4u6z0iTjiNXDeHytli6gxtQjMhSbN3Fkp3bloHZVY7ERMC8fPk5XOznkXGQMvPQh\n5QIDAQAB\n-----END PUBLIC KEY-----\n",
+      "signature": "YV7oifGoEBDNHnhefENhbNbyk20gEhkNRv9iAh7v/K7FqvbxRtJed6Aw53U4w4ELU+vGK76ULJXDsRB8MJ37+duePYnw3MqicrhndrZ9z7H5NS45xqhhQHz2pyyHcUiSsbf3S/BiB5nmfcFlOJwnmFd3sjUNm/6YXvJxsMrBApBRC0FPphNAVrg0etKJt3BZ9nLkpkX2CumoBeX1vD8zfaVfcTsMzUd9qwgiGmc8vZIl/ourisCJoiEzJyZF0SXiAD2Z6AkNTvnOg0wy8yaKrsvbS1fC5rRdSL/rfGoY4Cjkk5wlZITeD7Or6WC4khAVrmVhPXoGWs7syQ4vot9exA=="
+    }
+  ]
+}

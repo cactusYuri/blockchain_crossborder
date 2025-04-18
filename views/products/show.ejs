@@ -2,7 +2,7 @@
 
 <div class="row">
   <div class="col-md-6">
-    <img src="<%= product.imageUrl %>" class="img-fluid rounded" alt="<%= product.name %>">
+    <img src="<%= product.imageUrl.startsWith('http') ? product.imageUrl : ('/' + product.imageUrl) %>" alt="<%= product.name %>" class="img-fluid rounded shadow-sm product-detail-image">
     
     <% if (product.qrCodeData) { %>
       <div class="card mt-3">
