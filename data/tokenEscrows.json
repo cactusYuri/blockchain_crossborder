@@ -1,0 +1,47 @@
+{
+  "5cb068b1-7663-4aa9-bf91-c964c169cc99": {
+    "buyerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "sellerId": "c3bb99e4-0411-403d-bd67-6c2260d86987",
+    "amount": 125
+  },
+  "3366d9bc-b317-49ad-b39d-c77b0b00d5f9": {
+    "buyerId": "ac7c67fa-c0f3-4229-a893-ff0a2a0e9e6b",
+    "sellerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "amount": 24
+  },
+  "e723b793-195d-41de-bccd-d74cfd3d310b": {
+    "buyerId": "ac7c67fa-c0f3-4229-a893-ff0a2a0e9e6b",
+    "sellerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "amount": 0.1
+  },
+  "d0452135-67bd-43cd-9443-d26d1a39f208": {
+    "buyerId": "ac7c67fa-c0f3-4229-a893-ff0a2a0e9e6b",
+    "sellerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "amount": 1000
+  },
+  "e971fb6e-7048-4274-aaa6-edb3bfe87d38": {
+    "buyerId": "ac7c67fa-c0f3-4229-a893-ff0a2a0e9e6b",
+    "sellerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "amount": 100
+  },
+  "884fc067-6b66-4e4f-a645-20c00f3db21f": {
+    "buyerId": "ac7c67fa-c0f3-4229-a893-ff0a2a0e9e6b",
+    "sellerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "amount": 240
+  },
+  "93809e9c-565a-4256-a62d-54f18bfa5687": {
+    "buyerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "sellerId": "c3bb99e4-0411-403d-bd67-6c2260d86987",
+    "amount": 125
+  },
+  "12832161-c44b-46a7-8053-911a673e5699": {
+    "buyerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "sellerId": "c3bb99e4-0411-403d-bd67-6c2260d86987",
+    "amount": 125
+  },
+  "b8ae2539-dc4d-4ab3-8cd2-e88a54a6e1f7": {
+    "buyerId": "7862195a-1330-428d-9ed7-3b17274d8bb9",
+    "sellerId": "ac7c67fa-c0f3-4229-a893-ff0a2a0e9e6b",
+    "amount": 9999
+  }
+}

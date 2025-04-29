@@ -301,4 +301,34 @@ a:hover {
 /* 首页下方特性卡片区域 */
 .row.mt-5 .card {
     background-color: rgba(36, 59, 85, 0.5); /* 背景可以稍微浅一点点 */
+}
+
+/* 商品详情页 - 购买表单样式 */
+form.bg-light.border {
+    background-color: rgba(36, 59, 85, 0.6) !important; /* 覆盖 bg-light */
+    border-color: var(--border-color) !important; /* 确保边框颜色统一 */
+    border-radius: 0.75rem; /* 统一圆角 */
+    padding: 1.5rem !important; /* 调整内边距 */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* 确保购买表单内的标题和标签颜色正确 */
+form.bg-light.border h5,
+form.bg-light.border .form-label {
+    color: #ffffff; /* 使用更亮的白色 */
+}
+
+/* 购买表单内的帮助文本 */
+form.bg-light.border .form-text {
+    color: var(--text-secondary); /* 使用次要文字颜色 */
+}
+
+/* 购买表单内的 text-danger 颜色调整 */
+form.bg-light.border .form-text.text-danger {
+    color: #f5c6cb !important; /* 调整危险提示文字颜色使其更可见 */
+    background-color: rgba(220, 53, 69, 0.1); /* 可选：添加轻微背景 */
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    display: inline-block; /* 让背景适应内容 */
+    margin-top: 0.25rem;
 } 

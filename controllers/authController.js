@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const { v4: uuidv4 } = require('uuid');
 const { generateKeyPair, encrypt } = require('../utils/cryptoUtils');
 const { saveData } = require('../utils/dataPersistence'); // 引入 saveData
+const tokenSimulator = require('../simulators/tokenSimulator'); // <--- 添加这行
 
 // --- 定义用户文件路径 (不再需要) ---
 // const dataDir = path.join(__dirname, '../data');
@@ -51,8 +52,7 @@ exports.postRegister = (req, res) => {
         name,
         role: 'user',
         publicKey: publicKey,
-        encryptedPrivateKey: encryptedPrivateKey,
-        balance: 10000 // 初始虚拟币余额
+        encryptedPrivateKey: encryptedPrivateKey
     };
   
     // 添加到内存数组
@@ -62,17 +62,30 @@ exports.postRegister = (req, res) => {
     saveData('users', global.users); 
     // -------------------------------
 
+    // --- 初始化用户的 DEMO Token 余额 ---
+    try {
+        tokenSimulator.mintTokens(newUser.id, newUser.balance); // <--- 添加这行，使用 newUser.balance (即 10000)
+        console.log(`[Auth Register] Initialized DEMO token balance for user ${newUser.id}`);
+    } catch (tokenError) {
+        // 如果 token 初始化失败，这是一个严重问题，需要记录
+        console.error(`[Auth Register] CRITICAL: Failed to initialize token balance for new user ${newUser.id}.`, tokenError);
+        // 可以考虑是否要回滚用户创建，或者至少通知管理员
+        // 目前为了简单起见，只记录错误，注册流程继续
+    }
+    // ------------------------------------
+
     // 注册成功后自动登录
+    const initialBalance = tokenSimulator.getBalance(newUser.id); // <--- 获取初始余额
     req.session.user = {
         id: newUser.id,
         email: newUser.email,
         name: newUser.name,
         role: newUser.role,
         publicKey: newUser.publicKey,
-        balance: newUser.balance // 添加余额到 session
+        balance: initialBalance // <--- 使用 simulator 的余额
     };
   
-    console.log('New user registered and saved:', { id: newUser.id, email: newUser.email, role: newUser.role, balance: newUser.balance });
+    console.log('New user registered and saved:', { id: newUser.id, email: newUser.email, role: newUser.role, balance: initialBalance }); // 日志也用新余额
 
     res.redirect('/');
 
@@ -121,15 +134,19 @@ exports.postLogin = (req, res) => {
     });
   }
   
+  // 登录成功后设置 session (从 simulator 获取 balance)
+  const currentBalance = tokenSimulator.getBalance(user.id); // <--- 获取当前真实余额
   req.session.user = {
     id: user.id,
     email: user.email,
     name: user.name,
     role: user.role || 'user',
     publicKey: user.publicKey,
-    balance: user.balance !== undefined ? user.balance : 0 // 添加余额到 session, 旧用户可能没有，默认为0
+    balance: currentBalance // <--- 使用 simulator 的余额
   };
-  
+
+  console.log(`[Auth Login] User ${user.id} logged in. Session balance set to ${currentBalance}`); // 添加登录日志
+
   res.redirect('/');
 };
 
@@ -158,6 +175,9 @@ exports.getProfile = (req, res) => {
         return res.redirect('/auth/login');
     }
 
+    // 获取当前真实余额
+    const currentProfileBalance = tokenSimulator.getBalance(userId); // <--- 获取当前真实余额
+
     res.render('profile/show', { // 渲染新的视图文件
         title: '个人资料 - VeriTrade Chain',
         user: req.session.user, // 传递 session user 给 header/footer
@@ -166,7 +186,7 @@ exports.getProfile = (req, res) => {
             email: userProfile.email,
             publicKey: userProfile.publicKey,
             encryptedPrivateKey: userProfile.encryptedPrivateKey,
-            balance: userProfile.balance !== undefined ? userProfile.balance : 0
+            balance: currentProfileBalance // <--- 使用 simulator 的余额
             // 不要传递 passwordHash
         }
     });
